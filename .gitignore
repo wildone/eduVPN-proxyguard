@@ -1,0 +1,4 @@
+*.nix
+proxyguard
+.envrc
+.direnv
