@@ -17,7 +17,7 @@ This tool is focused on a client-server model. This proxy thus needs to run for 
 
 ## Client example
 
-This example listens on local UDP port 1337 and forwards packets to vpn.example.com 1337
+This example listens on local UDP port 1337 and forwards TCP packets to vpn.example.com 1337
 
 ```bash
 proxyguard --client --listen 127.0.0.1:1337 --to vpn.example.com:1337
@@ -25,7 +25,7 @@ proxyguard --client --listen 127.0.0.1:1337 --to vpn.example.com:1337
 
 > **_NOTE:_**  If you test the client on Linux, you might also need to add --fwmark 51820 (or some other number that the WG connection configures) to mark that the packets going out of this proxy are encrypted, preventing a routing loop. 51820 is the default for WireGuard. Note that this needs root.
 
-Packets are forwarded to the address of the first received UDP packet. So if the proxy receives an UDP packet from port x first, it will remember this as the destination. This is so that WireGuard can use a dynamic port and this client can automatically infer where to send upcoming packets to.
+The received TCP packets from the server (in this case `vpn.example.com`) are forwarded back to the address of the first received UDP packet. So if the proxy receives an UDP packet from port x first, it will remember this as the destination for received packets. This is so that WireGuard can use a dynamic port.
 
 
 To then use this with WireGuard, you need to change the endpoint in the WireGuard config:
