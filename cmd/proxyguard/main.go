@@ -230,13 +230,14 @@ func server(listen string, to string) error {
 		// We got a successful connection
 		// Handle it in a goroutine so that we can continue listening
 		go func(conn *net.TCPConn) {
+			defer conn.Close()
 			// Check if we can connect to WireGuard
 			wgconn, err := net.DialUDP("udp", nil, wgaddr)
 			if err != nil {
 				log.Println("Failed to connect to wg", err)
 				return
 			}
-			defer conn.Close()
+			defer wgconn.Close()
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
