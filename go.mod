@@ -1,3 +1,3 @@
-module codeberg.org/jwijenbergh/proxyguard
+module codeberg.org/eduVPN/proxyguard
 
 go 1.19
