@@ -209,11 +209,6 @@ func server(listen string, to string) error {
 	if err != nil {
 		return err
 	}
-	// Check if we can connect to WireGuard
-	wgconn, err := net.DialUDP("udp", nil, wgaddr)
-	if err != nil {
-		return err
-	}
 	tcpaddr, err := net.ResolveTCPAddr("tcp", listen)
 	if err != nil {
 		return err
@@ -229,12 +224,18 @@ func server(listen string, to string) error {
 
 		conn, err := tcpconn.AcceptTCP()
 		if err != nil {
-			log.Println("Failed to accept client, continuing...")
+			log.Println("Failed to accept client", err)
 			continue
 		}
 		// We got a successful connection
 		// Handle it in a goroutine so that we can continue listening
 		go func(conn *net.TCPConn) {
+			// Check if we can connect to WireGuard
+			wgconn, err := net.DialUDP("udp", nil, wgaddr)
+			if err != nil {
+				log.Println("Failed to connect to wg", err)
+				return
+			}
 			defer conn.Close()
 			wg := sync.WaitGroup{}
 			wg.Add(1)
