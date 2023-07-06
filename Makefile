@@ -1,21 +1,14 @@
 PREFIX=/usr/local
 
-.PHONY: all fmt check vet clean install sloc
+.PHONY: all lint clean install sloc
 
 proxyguard: cmd/proxyguard/main.go
 	go build -o $@ codeberg.org/eduVPN/proxyguard/cmd/proxyguard/...
 
 all: proxyguard
 
-fmt:
-	gofmt -s -w cmd/proxyguard/*.go
-
-check:
-	# https://staticcheck.io/
-	staticcheck codeberg.org/eduVPN/proxyguard/cmd/proxyguard/...
-
-vet:
-	go vet codeberg.org/eduVPN/proxyguard/cmd/proxyguard/...
+lint:
+	golangci-lint run ./... -E stylecheck,revive,gocritic
 
 sloc:
 	cloc cmd/proxyguard/*.go
