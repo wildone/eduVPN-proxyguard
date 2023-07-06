@@ -287,7 +287,8 @@ func main() {
 	}
 	// fwmark flag is given but we are not linux
 	if *fwmark != -1 && runtime.GOOS != "linux" {
-		fmt.Fprintln(os.Stderr, "Invalid invocation warning: The --fwmark flag is a NO-OP when you're not using Linux. We will ignor it...")
+		fmt.Fprintln(os.Stderr, "Invalid invocation warning: The --fwmark flag is a NO-OP when you're not using Linux. We will ignore it...")
+		*fwmark = -1
 	}
 	// We are a client
 	if *ic {
