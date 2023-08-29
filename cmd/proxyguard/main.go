@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -51,14 +52,14 @@ func main() {
 	}
 	// We are a client
 	if *ic {
-		err := proxyguard.Client(*listen, *to, *fwmark)
+		err := proxyguard.Client(context.Background(), *listen, *to, *fwmark)
 		if err != nil {
 			log.Fatalf("error occurred when setting up a client: %v", err)
 		}
 		return
 	}
 	// We are a server
-	err := proxyguard.Server(*listen, *to)
+	err := proxyguard.Server(context.Background(), *listen, *to)
 	if err != nil {
 		log.Fatalf("error occurred when setting up server side: %v", err)
 	}

@@ -1,6 +1,7 @@
 package proxyguard
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"log"
@@ -58,7 +59,7 @@ func writeTCP(conn net.Conn, buf []byte, n int) error {
 
 // TCPToUDP reads from the TCP connection tcpc and writes packets to the udpc connection
 // The incoming TCP packets are encapsulated UDP packets with a 2 byte length prefix
-func TCPToUDP(tcpc *net.TCPConn, udpc *net.UDPConn) error {
+func TCPToUDP(ctx context.Context, tcpc *net.TCPConn, udpc *net.UDPConn) error {
 	var bufr [BufSize]byte
 	todo := 0
 	for {
@@ -76,14 +77,19 @@ func TCPToUDP(tcpc *net.TCPConn, udpc *net.UDPConn) error {
 			todo -= done
 		}
 		if rerr != nil {
-			return rerr
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				return rerr
+			}
 		}
 	}
 }
 
 // TCPToUDP reads from the UDP connection udpc and writes packets to the tcpc connection
 // The incoming UDP packets are encapsulated inside TCP with a 2 byte length prefix
-func UDPToTCP(udpc *net.UDPConn, tcpc *net.TCPConn) error {
+func UDPToTCP(ctx context.Context, udpc *net.UDPConn, tcpc *net.TCPConn) error {
 	var bufs [BufSize]byte
 	for {
 		n, _, rerr := udpc.ReadFromUDP(bufs[2:])
@@ -94,26 +100,46 @@ func UDPToTCP(udpc *net.UDPConn, tcpc *net.TCPConn) error {
 			}
 		}
 		if rerr != nil {
-			return rerr
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				return rerr
+			}
 		}
 	}
 }
 
 // inferUDPAddr gets the UDP address from the first packet that is sent to the proxy
-func inferUDPAddr(laddr *net.UDPAddr) (*net.UDPAddr, []byte, error) {
+func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte, error) {
 	conn, err := net.ListenUDP("udp", laddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer conn.Close()
-
+	go func() {
+		<-ctx.Done()
+		conn.Close()
+	}()
+	defer func(){
+		select {
+		case <- ctx.Done():
+			// already closed
+		default:
+			conn.Close()
+		}
+	}()
 	var tempbuf [BufSize]byte
 	n, addr, err := conn.ReadFromUDP(tempbuf[HdrLength:])
+	if err != nil {
+		select {
+		case <- ctx.Done():
+			return nil, nil, ctx.Err()
+		default:
+			return nil, nil, err
+		}
+	}
 	if addr != nil {
 		return addr, tempbuf[:n+HdrLength], nil
-	}
-	if err != nil {
-		return nil, nil, err
 	}
 	return nil, nil, errors.New("could not infer port because address was nil")
 }
@@ -122,7 +148,7 @@ func inferUDPAddr(laddr *net.UDPAddr) (*net.UDPAddr, []byte, error) {
 // listen is the IP:PORT port
 // to is the IP:PORT string for the TCP proxy on the other end
 // fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
-func Client(listen string, to string, fwmark int) error {
+func Client(ctx context.Context, listen string, to string, fwmark int) error {
 	var conn net.Conn
 	var derr error
 	log.Println("Connecting to TCP server...")
@@ -135,7 +161,18 @@ func Client(listen string, to string, fwmark int) error {
 	if derr != nil {
 		return derr
 	}
-	defer conn.Close()
+	go func() {
+		<- ctx.Done()
+		conn.Close()
+	}()
+	defer func(){
+		select {
+		case <- ctx.Done():
+			// already closed
+		default:
+			conn.Close()
+		}
+	}()
 	tcpc, ok := conn.(*net.TCPConn)
 	if !ok {
 		return errors.New("connection is not a TCP connection")
@@ -147,7 +184,7 @@ func Client(listen string, to string, fwmark int) error {
 		return err
 	}
 	log.Println("Waiting for first UDP packet...")
-	wgaddr, first, err := inferUDPAddr(udpaddr)
+	wgaddr, first, err := inferUDPAddr(ctx, udpaddr)
 	if err != nil {
 		return err
 	}
@@ -156,7 +193,18 @@ func Client(listen string, to string, fwmark int) error {
 	if err != nil {
 		return err
 	}
-	defer wgconn.Close()
+	go func() {
+		<- ctx.Done()
+		wgconn.Close()
+	}()
+	defer func(){
+		select {
+		case <- ctx.Done():
+			// already closed
+		default:
+			wgconn.Close()
+		}
+	}()
 	wg := sync.WaitGroup{}
 	log.Println("Client is ready for converting UDP<->TCP")
 
@@ -167,12 +215,12 @@ func Client(listen string, to string, fwmark int) error {
 	// read from udp and write to tcp socket
 	go func() {
 		defer wg.Done()
-		UDPToTCP(wgconn, tcpc)
+		UDPToTCP(ctx, wgconn, tcpc)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		TCPToUDP(tcpc, wgconn)
+		TCPToUDP(ctx, tcpc, wgconn)
 	}()
 	wg.Wait()
 	return nil
@@ -182,7 +230,7 @@ func Client(listen string, to string, fwmark int) error {
 // wgp is the WireGuard port
 // tcpp is the TCP listening port
 // to is the IP:PORT string
-func Server(listen string, to string) error {
+func Server(ctx context.Context, listen string, to string) error {
 	wgaddr, err := net.ResolveUDPAddr("udp", to)
 	if err != nil {
 		return err
@@ -195,38 +243,67 @@ func Server(listen string, to string) error {
 	if err != nil {
 		return err
 	}
-	defer tcpconn.Close()
+	go func() {
+		<- ctx.Done()
+		tcpconn.Close()
+	}()
+	defer func(){
+		select {
+		case <- ctx.Done():
+			// already closed
+		default:
+			tcpconn.Close()
+		}
+	}()
 	log.Println("Proxy server is ready to receive clients...")
 	// Begin accepting TCP connections
 	for {
 
 		conn, err := tcpconn.AcceptTCP()
 		if err != nil {
-			log.Println("Failed to accept client", err)
-			continue
+			select {
+			case <- ctx.Done():
+				return ctx.Err()
+			default:
+				log.Println("Failed to accept client", err)
+				continue
+			}
 		}
 		// We got a successful connection
 		// Handle it in a goroutine so that we can continue listening
 		go func(conn *net.TCPConn) {
-			defer conn.Close()
 			// Check if we can connect to WireGuard
 			wgconn, err := net.DialUDP("udp", nil, wgaddr)
 			if err != nil {
 				log.Println("Failed to connect to wg", err)
+				conn.Close()
 				return
 			}
-			defer wgconn.Close()
+			go func() {
+				<- ctx.Done()
+				conn.Close()
+				wgconn.Close()
+			}()
+			defer func(){
+				select {
+				case <- ctx.Done():
+				    // already closed
+				default:
+				    conn.Close()
+				    wgconn.Close()
+				}
+			}()
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				TCPToUDP(conn, wgconn)
+				TCPToUDP(ctx, conn, wgconn)
 			}()
 			wg.Add(1)
 			// handle outgoing
 			go func() {
 				defer wg.Done()
-				UDPToTCP(wgconn, conn)
+				UDPToTCP(ctx, wgconn, conn)
 			}()
 			wg.Wait()
 		}(conn)
