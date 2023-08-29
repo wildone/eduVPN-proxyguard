@@ -121,7 +121,7 @@ func inferUDPAddr(laddr *net.UDPAddr) (*net.UDPAddr, []byte, error) {
 // Client creates a client that forwards UDP to TCP
 // listen is the IP:PORT port
 // to is the IP:PORT string for the TCP proxy on the other end
-// fwmark is the mark to set on the TCP socket such that we do not get a routing loop
+// fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
 func Client(listen string, to string, fwmark int) error {
 	var conn net.Conn
 	var derr error
