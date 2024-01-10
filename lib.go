@@ -87,7 +87,7 @@ func TCPToUDP(ctx context.Context, tcpc *net.TCPConn, udpc *net.UDPConn) error {
 	}
 }
 
-// TCPToUDP reads from the UDP connection udpc and writes packets to the tcpc connection
+// UDPToTCP reads from the UDP connection udpc and writes packets to the tcpc connection
 // The incoming UDP packets are encapsulated inside TCP with a 2 byte length prefix
 func UDPToTCP(ctx context.Context, udpc *net.UDPConn, tcpc *net.TCPConn) error {
 	var bufs [BufSize]byte
