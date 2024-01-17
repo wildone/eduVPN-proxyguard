@@ -7,7 +7,7 @@ import (
 
 
 // markedDial creates a TCP dial with fwmark/SO_MARK set
-func markedDial(mark int, to string) (net.Conn, error) {
+func markedDial(mark int, laddr *net.TCPAddr, to string) (net.Conn, error) {
 	d := net.Dialer{
 		Control: func(network, address string, conn syscall.RawConn) error {
 			var seterr error
@@ -18,6 +18,9 @@ func markedDial(mark int, to string) (net.Conn, error) {
 				return err
 			}
 			return seterr
+		},
+		LocalAddr: &net.TCPAddr{
+			Port: laddr.Port,
 		},
 	}
 	return d.Dial("tcp", to)

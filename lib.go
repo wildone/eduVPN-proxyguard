@@ -153,10 +153,19 @@ func Client(ctx context.Context, listen string, to string, fwmark int) error {
 	var derr error
 	log.Println("Connecting to TCP server...")
 	// set fwmark
+	laddr, err := net.ResolveTCPAddr("tcp", listen)
+	if err != nil {
+		return err
+	}
 	if fwmark != -1 {
-		conn, derr = markedDial(fwmark, to)
+		conn, derr = markedDial(fwmark, laddr, to)
 	} else {
-		conn, derr = net.Dial("tcp", to)
+		dialer := net.Dialer{
+			LocalAddr: &net.TCPAddr{
+				Port: laddr.Port,
+			},
+		}
+		conn, derr = dialer.Dial("tcp", to)
 	}
 	if derr != nil {
 		return derr
