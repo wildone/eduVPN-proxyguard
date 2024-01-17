@@ -1,6 +1,6 @@
 PREFIX=/usr/local
 
-.PHONY: all client server lint clean install sloc
+.PHONY: all client server fmt lint clean install sloc
 
 all: client server
 
@@ -9,6 +9,9 @@ client: cmd/proxyguard-client/main.go
 
 server: cmd/proxyguard-server/main.go
 	go build -o proxyguard-$@ codeberg.org/eduVPN/proxyguard/cmd/proxyguard-server/...
+
+fmt:
+	gofumpt -w .
 
 lint:
 	golangci-lint run ./... -E stylecheck,revive,gocritic
