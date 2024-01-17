@@ -10,6 +10,16 @@ import (
 	"codeberg.org/eduVPN/proxyguard"
 )
 
+type ServerLogger struct{}
+
+func (cl *ServerLogger) Logf(msg string, params ...interface{}) {
+	log.Printf(fmt.Sprintf("[Server] %s\n", msg), params...)
+}
+
+func (ol *ServerLogger) Log(msg string) {
+	log.Printf("[Server] %s\n", msg)
+}
+
 func main() {
 	listen := flag.String("listen", "", "The IP:PORT to listen for TCP traffic.")
 	to := flag.String("to", "", "The IP:PORT to which to send the converted UDP traffic to. Specify the WireGuard destination.")
@@ -29,4 +39,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("error occurred when setting up a server: %v", err)
 	}
+}
+
+func init() {
+	proxyguard.UpdateLogger(&ServerLogger{})
 }

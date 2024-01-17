@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"log"
 	"net"
 	"sync"
 )
@@ -151,7 +150,7 @@ func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte
 func Client(ctx context.Context, listen string, to string, fwmark int) error {
 	var conn net.Conn
 	var derr error
-	log.Println("Connecting to TCP server...")
+	log.Log("Connecting to TCP server...")
 	// set fwmark
 	laddr, err := net.ResolveTCPAddr("tcp", listen)
 	if err != nil {
@@ -186,18 +185,18 @@ func Client(ctx context.Context, listen string, to string, fwmark int) error {
 	if !ok {
 		return errors.New("connection is not a TCP connection")
 	}
-	log.Println("Connected to TCP server")
+	log.Log("Connected to TCP server")
 
 	udpaddr, err := net.ResolveUDPAddr("udp", listen)
 	if err != nil {
 		return err
 	}
-	log.Println("Waiting for first UDP packet...")
+	log.Log("Waiting for first UDP packet...")
 	wgaddr, first, err := inferUDPAddr(ctx, udpaddr)
 	if err != nil {
 		return err
 	}
-	log.Println("First UDP packet received with address:", wgaddr.String())
+	log.Logf("First UDP packet received with address: %s", wgaddr.String())
 	wgconn, err := net.DialUDP("udp", udpaddr, wgaddr)
 	if err != nil {
 		return err
@@ -215,7 +214,7 @@ func Client(ctx context.Context, listen string, to string, fwmark int) error {
 		}
 	}()
 	wg := sync.WaitGroup{}
-	log.Println("Client is ready for converting UDP<->TCP")
+	log.Log("Client is ready for converting UDP<->TCP")
 
 	// first forward the outstanding packet
 	writeTCP(tcpc, first[:], len(first)-HdrLength)
@@ -264,7 +263,7 @@ func Server(ctx context.Context, listen string, to string) error {
 			tcpconn.Close()
 		}
 	}()
-	log.Println("Proxy server is ready to receive clients...")
+	log.Log("Proxy server is ready to receive clients...")
 	// Begin accepting TCP connections
 	for {
 
@@ -274,7 +273,7 @@ func Server(ctx context.Context, listen string, to string) error {
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
-				log.Println("Failed to accept client", err)
+				log.Logf("Failed to accept client: %v", err)
 				continue
 			}
 		}
@@ -284,7 +283,7 @@ func Server(ctx context.Context, listen string, to string) error {
 			// Check if we can connect to WireGuard
 			wgconn, err := net.DialUDP("udp", nil, wgaddr)
 			if err != nil {
-				log.Println("Failed to connect to wg", err)
+				log.Logf("Failed to connect to wg: %v", err)
 				conn.Close()
 				return
 			}

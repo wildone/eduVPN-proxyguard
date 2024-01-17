@@ -11,6 +11,16 @@ import (
 	"codeberg.org/eduVPN/proxyguard"
 )
 
+type ClientLogger struct{}
+
+func (cl *ClientLogger) Logf(msg string, params ...interface{}) {
+	log.Printf(fmt.Sprintf("[Client] %s\n", msg), params...)
+}
+
+func (ol *ClientLogger) Log(msg string) {
+	log.Printf("[Client] %s\n", msg)
+}
+
 func main() {
 	fwmark := flag.Int("fwmark", -1, "[Linux only] The fwmark/SO_MARK to use on the TCP client socket. -1 is disable.")
 	listen := flag.String("listen", "", "The IP:PORT to listen for UDP traffic.")
@@ -35,4 +45,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("error occurred when setting up a client: %v", err)
 	}
+}
+
+func init() {
+	proxyguard.UpdateLogger(&ClientLogger{})
 }
