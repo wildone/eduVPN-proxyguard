@@ -5,7 +5,6 @@ import (
 	"syscall"
 )
 
-
 // markedDial creates a TCP dial with fwmark/SO_MARK set
 func markedDial(mark int, laddr *net.TCPAddr, to string) (net.Conn, error) {
 	d := net.Dialer{

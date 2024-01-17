@@ -120,9 +120,9 @@ func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte
 		<-ctx.Done()
 		conn.Close()
 	}()
-	defer func(){
+	defer func() {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			// already closed
 		default:
 			conn.Close()
@@ -132,7 +132,7 @@ func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte
 	n, addr, err := conn.ReadFromUDP(tempbuf[HdrLength:])
 	if err != nil {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return nil, nil, ctx.Err()
 		default:
 			return nil, nil, err
@@ -171,12 +171,12 @@ func Client(ctx context.Context, listen string, to string, fwmark int) error {
 		return derr
 	}
 	go func() {
-		<- ctx.Done()
+		<-ctx.Done()
 		conn.Close()
 	}()
-	defer func(){
+	defer func() {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			// already closed
 		default:
 			conn.Close()
@@ -203,12 +203,12 @@ func Client(ctx context.Context, listen string, to string, fwmark int) error {
 		return err
 	}
 	go func() {
-		<- ctx.Done()
+		<-ctx.Done()
 		wgconn.Close()
 	}()
-	defer func(){
+	defer func() {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			// already closed
 		default:
 			wgconn.Close()
@@ -253,12 +253,12 @@ func Server(ctx context.Context, listen string, to string) error {
 		return err
 	}
 	go func() {
-		<- ctx.Done()
+		<-ctx.Done()
 		tcpconn.Close()
 	}()
-	defer func(){
+	defer func() {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			// already closed
 		default:
 			tcpconn.Close()
@@ -271,7 +271,7 @@ func Server(ctx context.Context, listen string, to string) error {
 		conn, err := tcpconn.AcceptTCP()
 		if err != nil {
 			select {
-			case <- ctx.Done():
+			case <-ctx.Done():
 				return ctx.Err()
 			default:
 				log.Println("Failed to accept client", err)
@@ -289,17 +289,17 @@ func Server(ctx context.Context, listen string, to string) error {
 				return
 			}
 			go func() {
-				<- ctx.Done()
+				<-ctx.Done()
 				conn.Close()
 				wgconn.Close()
 			}()
-			defer func(){
+			defer func() {
 				select {
-				case <- ctx.Done():
-				    // already closed
+				case <-ctx.Done():
+					// already closed
 				default:
-				    conn.Close()
-				    wgconn.Close()
+					conn.Close()
+					wgconn.Close()
 				}
 			}()
 			wg := sync.WaitGroup{}

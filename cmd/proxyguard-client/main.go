@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+
 	"codeberg.org/eduVPN/proxyguard"
 )
 

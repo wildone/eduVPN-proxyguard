@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+
 	"codeberg.org/eduVPN/proxyguard"
 )
 
