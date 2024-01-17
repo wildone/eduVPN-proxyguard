@@ -1,20 +1,28 @@
 PREFIX=/usr/local
 
-.PHONY: all lint clean install sloc
+.PHONY: all client server lint clean install sloc
 
-proxyguard: cmd/proxyguard/main.go
-	go build -o $@ codeberg.org/eduVPN/proxyguard/cmd/proxyguard/...
+all: client server
 
-all: proxyguard
+client: cmd/proxyguard-client/main.go
+	go build -o proxyguard-$@ codeberg.org/eduVPN/proxyguard/cmd/proxyguard-client/...
+
+server: cmd/proxyguard-server/main.go
+	go build -o proxyguard-$@ codeberg.org/eduVPN/proxyguard/cmd/proxyguard-server/...
 
 lint:
 	golangci-lint run ./... -E stylecheck,revive,gocritic
 
 sloc:
-	cloc cmd/proxyguard/*.go
+	cloc --include-ext=go .
 
 clean:
 	rm -f proxyguard
 
-install: all
-	install -m 0755 -D proxyguard $(DESTDIR)$(PREFIX)/sbin/proxyguard
+install-client: client
+	install -m 0755 -D proxyguard-client $(DESTDIR)$(PREFIX)/sbin/proxyguard-client
+
+install-server: server
+	install -m 0755 -D proxyguard-server $(DESTDIR)$(PREFIX)/sbin/proxyguard-server
+
+install: install-client install-server
