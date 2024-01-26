@@ -145,23 +145,27 @@ func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte
 
 // Client creates a client that forwards UDP to TCP
 // listen is the IP:PORT port
+// tcpsp is the TCP source port
 // to is the IP:PORT string for the TCP proxy on the other end
 // fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
-func Client(ctx context.Context, listen string, to string, fwmark int) error {
+func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int) error {
 	var conn net.Conn
 	var derr error
 	log.Log("Connecting to TCP server...")
-	// set fwmark
-	laddr, err := net.ResolveTCPAddr("tcp", listen)
-	if err != nil {
-		return err
+	if tcpsp == -1 {
+		laddr, err := net.ResolveTCPAddr("tcp", listen)
+		if err != nil {
+			return err
+		}
+		tcpsp = laddr.Port
 	}
+	// set fwmark
 	if fwmark != -1 {
-		conn, derr = markedDial(fwmark, laddr, to)
+		conn, derr = markedDial(fwmark, tcpsp, to)
 	} else {
 		dialer := net.Dialer{
 			LocalAddr: &net.TCPAddr{
-				Port: laddr.Port,
+				Port: tcpsp,
 			},
 		}
 		conn, derr = dialer.Dial("tcp", to)
