@@ -4,10 +4,6 @@ set -e
 
 [ -z "$1" ] && { echo "no version supplied"; exit 1; }
 
-ORG=jwijenbergh
-PROJECT_NAME=$(basename "$(pwd)")
-PROJECT_VERSION="$1"
-
 # check if there are unstaged changes
 [ -z "$(git diff --quiet)" ] && { echo "there are unstaged changes, commit them first"; exit 1; }
 
