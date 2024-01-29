@@ -1,4 +1,5 @@
 *.nix
-./proxyguard
+/proxyguard-*
+/release
 .envrc
 .direnv
