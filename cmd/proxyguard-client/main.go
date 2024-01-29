@@ -26,7 +26,13 @@ func main() {
 	listen := flag.String("listen", "", "The IP:PORT to listen for UDP traffic.")
 	tcpsp := flag.Int("tcpport", -1, "The PORT to use as the TCP source port. The default is -1, which indicates the same port as the UDP listen. Set this to zero to allocate a freely available port.")
 	to := flag.String("to", "", "The IP:PORT to which to send the converted TCP traffic to. Specify the server endpoint which also runs Proxyguard.")
+	version := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("proxyguard-client\n%s", proxyguard.Version())
+		os.Exit(0)
+	}
 	// listen and to flags are mandatory
 	if *listen == "" {
 		fmt.Fprintln(os.Stderr, "Invalid invaction error: Please supply the --listen flag")

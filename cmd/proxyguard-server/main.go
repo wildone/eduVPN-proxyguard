@@ -23,7 +23,13 @@ func (sl *ServerLogger) Log(msg string) {
 func main() {
 	listen := flag.String("listen", "", "The IP:PORT to listen for TCP traffic.")
 	to := flag.String("to", "", "The IP:PORT to which to send the converted UDP traffic to. Specify the WireGuard destination.")
+	version := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("proxyguard-server\n%s", proxyguard.Version())
+		os.Exit(0)
+	}
 	// listen and to flags are mandatory
 	if *listen == "" {
 		fmt.Fprintln(os.Stderr, "Invalid invaction error: Please supply the --listen flag")
