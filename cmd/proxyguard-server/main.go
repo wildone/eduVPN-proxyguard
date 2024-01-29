@@ -12,11 +12,11 @@ import (
 
 type ServerLogger struct{}
 
-func (cl *ServerLogger) Logf(msg string, params ...interface{}) {
+func (sl *ServerLogger) Logf(msg string, params ...interface{}) {
 	log.Printf(fmt.Sprintf("[Server] %s\n", msg), params...)
 }
 
-func (ol *ServerLogger) Log(msg string) {
+func (sl *ServerLogger) Log(msg string) {
 	log.Printf("[Server] %s\n", msg)
 }
 
