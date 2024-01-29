@@ -52,7 +52,7 @@ func writeTCP(conn net.Conn, buf []byte, n int) error {
 	// Put the header length at the front
 	binary.BigEndian.PutUint16(buf[:HdrLength], uint16(n))
 	// store the length and packet itself
-	_, werr := conn.Write(buf[:])
+	_, werr := conn.Write(buf)
 	return werr
 }
 
@@ -221,18 +221,27 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 	log.Log("Client is ready for converting UDP<->TCP")
 
 	// first forward the outstanding packet
-	writeTCP(tcpc, first[:], len(first)-HdrLength)
+	err = writeTCP(tcpc, first, len(first)-HdrLength)
+	if err != nil {
+		log.Logf("Failed forwarding first outstanding packet: %v", err)
+	}
 
 	wg.Add(1)
 	// read from udp and write to tcp socket
 	go func() {
 		defer wg.Done()
-		UDPToTCP(ctx, wgconn, tcpc)
+		err = UDPToTCP(ctx, wgconn, tcpc)
+		if err != nil {
+		    log.Logf("UDPToTCP completed with error: %v", err)
+		}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		TCPToUDP(ctx, tcpc, wgconn)
+		err = TCPToUDP(ctx, tcpc, wgconn)
+		if err != nil {
+		    log.Logf("TCPToUDP completed with error: %v", err)
+		}
 	}()
 	wg.Wait()
 	return nil
@@ -309,13 +318,19 @@ func Server(ctx context.Context, listen string, to string) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				TCPToUDP(ctx, conn, wgconn)
+				err = TCPToUDP(ctx, conn, wgconn)
+				if err != nil {
+				    log.Logf("TCPToUDP completed with error: %v", err)
+				}
 			}()
 			wg.Add(1)
 			// handle outgoing
 			go func() {
 				defer wg.Done()
-				UDPToTCP(ctx, wgconn, conn)
+				err = UDPToTCP(ctx, wgconn, conn)
+				if err != nil {
+				    log.Logf("UDPToTCP completed with error: %v", err)
+				}
 			}()
 			wg.Wait()
 		}(conn)
