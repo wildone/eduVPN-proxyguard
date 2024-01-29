@@ -25,6 +25,8 @@ proxyguard-client --listen 127.0.0.1:1337 --to vpn.example.com:1337
 
 > **_NOTE:_**  If you test the client on Linux, you might also need to add --fwmark 51820 (or some other number that the WG connection configures) to mark that the packets going out of this proxy are encrypted, preventing a routing loop. 51820 is the default for WireGuard. Note that this needs root.
 
+> **_NOTE:_**  The default TCP source port is the same as the UDP listen port, 1337 in this case. To change this, pass --tcpport. You can set it to 0 to automatically pick an available TCP source port.
+
 The received TCP packets from the server (in this case `vpn.example.com`) are forwarded back to the address of the first received UDP packet. So if the proxy receives an UDP packet from port x first, it will remember this as the destination for received packets. This is so that WireGuard can use a dynamic port.
 
 
