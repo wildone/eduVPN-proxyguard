@@ -232,7 +232,7 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		defer wg.Done()
 		err = UDPToTCP(ctx, wgconn, tcpc)
 		if err != nil {
-		    log.Logf("UDPToTCP completed with error: %v", err)
+			log.Logf("UDPToTCP completed with error: %v", err)
 		}
 	}()
 	wg.Add(1)
@@ -240,7 +240,7 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		defer wg.Done()
 		err = TCPToUDP(ctx, tcpc, wgconn)
 		if err != nil {
-		    log.Logf("TCPToUDP completed with error: %v", err)
+			log.Logf("TCPToUDP completed with error: %v", err)
 		}
 	}()
 	wg.Wait()
@@ -320,7 +320,7 @@ func Server(ctx context.Context, listen string, to string) error {
 				defer wg.Done()
 				err = TCPToUDP(ctx, conn, wgconn)
 				if err != nil {
-				    log.Logf("TCPToUDP completed with error: %v", err)
+					log.Logf("TCPToUDP completed with error: %v", err)
 				}
 			}()
 			wg.Add(1)
@@ -329,7 +329,7 @@ func Server(ctx context.Context, listen string, to string) error {
 				defer wg.Done()
 				err = UDPToTCP(ctx, wgconn, conn)
 				if err != nil {
-				    log.Logf("UDPToTCP completed with error: %v", err)
+					log.Logf("UDPToTCP completed with error: %v", err)
 				}
 			}()
 			wg.Wait()

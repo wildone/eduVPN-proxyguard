@@ -1,8 +1,8 @@
 package proxyguard
 
 import (
-	"runtime/debug"
 	"fmt"
+	"runtime/debug"
 )
 
 // version is the current version
