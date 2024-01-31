@@ -1,5 +1,5 @@
 [Unit]
-Description=Server side binary to proxy WireGuard UDP connections over TCP
+Description=Proxy WireGuard traffic from TCP to UDP
 
 [Service]
 # capability to allow binding to ports < 1024
