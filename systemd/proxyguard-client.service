@@ -1,5 +1,7 @@
 [Unit]
 Description=Proxy WireGuard traffic from UDP to TCP
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 AmbientCapabilities=CAP_NET_ADMIN
