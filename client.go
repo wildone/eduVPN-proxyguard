@@ -7,7 +7,38 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
+	"syscall"
 )
+
+// GotClientFD is a function that is called when the Client file descriptor has been obtained
+var GotClientFD func(fd int)
+
+// configureSocket creates a TCP dial with fwmark/SO_MARK set
+// it also calls the GotClientFD updater
+func configureSocket(mark int, sport int) net.Dialer {
+	d := net.Dialer{
+		Control: func(network, address string, conn syscall.RawConn) error {
+			var seterr error
+			err := conn.Control(func(fd uintptr) {
+				if mark != -1 && runtime.GOOS == "linux" {
+					seterr = socketFWMark(int(fd), mark)
+				}
+				if GotClientFD != nil {
+					GotClientFD(int(fd))
+				}
+			})
+			if err != nil {
+				return err
+			}
+			return seterr
+		},
+		LocalAddr: &net.TCPAddr{
+			Port: sport,
+		},
+	}
+	return d
+}
 
 // Client creates a client that forwards UDP to TCP
 // listen is the IP:PORT port
@@ -36,17 +67,8 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		tcpsp = laddr.Port
 	}
 
-	var dialer net.Dialer
-	// set fwmark
-	if fwmark != -1 {
-		dialer = markedDial(fwmark, tcpsp)
-	} else {
-		dialer = net.Dialer{
-			LocalAddr: &net.TCPAddr{
-				Port: tcpsp,
-			},
-		}
-	}
+	// set fwmark on the socket
+	dialer := configureSocket(fwmark, tcpsp)
 	c := &http.Client{
 		Transport: &http.Transport{
 			Dial: dialer.Dial,
