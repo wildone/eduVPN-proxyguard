@@ -48,7 +48,7 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(5 * time.Second):
+		case <-time.After(2 * time.Second):
 		}
 		if err != nil {
 			log.Logf("Retrying as client exited with error: %v", err)
