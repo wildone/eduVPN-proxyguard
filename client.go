@@ -48,13 +48,12 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
-			if err != nil {
-				log.Logf("Retrying as client exited with error: %v", err)
-			} else {
-				log.Logf("Retrying as client exited cleanly but context is not canceled yet")
-			}
-			time.Sleep(5 * time.Second)
+		case <-time.After(5 * time.Second):
+		}
+		if err != nil {
+			log.Logf("Retrying as client exited with error: %v", err)
+		} else {
+			log.Logf("Retrying as client exited cleanly but context is not canceled yet")
 		}
 	}
 }
