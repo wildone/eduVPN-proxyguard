@@ -132,7 +132,7 @@ func inferUDPAddr(ctx context.Context, laddr *net.UDPAddr) (*net.UDPAddr, []byte
 	return nil, nil, errors.New("could not infer port because address was nil")
 }
 
-func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) {
+func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error {
 	cancel := make(chan struct{})
 	go func() {
 		for {
@@ -145,6 +145,8 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) {
 		}
 	}()
 	defer close(cancel)
+
+	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	// read from udp and write to ws socket
@@ -152,7 +154,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) {
 		defer wg.Done()
 		err := udpToTCP(udpc, rw.Writer)
 		if err != nil {
-			log.Logf("UDP -> TCP completed with error: %v", err)
+			errChan <- err
 		}
 	}()
 	wg.Add(1)
@@ -160,8 +162,13 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) {
 		defer wg.Done()
 		err := tcpToUDP(rw.Reader, udpc)
 		if err != nil {
-			log.Logf("TCP -> UDP completed with error: %v", err)
+			errChan <- err
 		}
 	}()
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	return <-errChan
 }
