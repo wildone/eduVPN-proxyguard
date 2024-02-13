@@ -82,7 +82,7 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Logf("Tunneling UDP<->TCP client exited with error: %v", err)
 	} else {
-		log.Logf("Tunneling UDP<->TCP exited cleanly")
+		log.Logf("Tunneling UDP<->TCP client exited cleanly")
 	}
 }
 
