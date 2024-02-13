@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"syscall"
+	"time"
 )
 
 // GotClientFD is a function that is called when the Client file descriptor has been obtained
@@ -40,24 +41,30 @@ func configureSocket(mark int, sport int) net.Dialer {
 	return d
 }
 
-// Client creates a client that forwards UDP to TCP
+// Client runs doClient in a retry loop with a 5 second pause
+func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int) error {
+	for {
+		err := doClient(ctx, listen, tcpsp, to, fwmark)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if err != nil {
+				log.Logf("Retrying as client exited with error: %v", err)
+			} else {
+				log.Logf("Retrying as client exited cleanly but context is not canceled yet")
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+// doClient creates a client that forwards UDP to TCP
 // listen is the IP:PORT port
 // tcpsp is the TCP source port
 // to is the IP:PORT string for the TCP proxy on the other end
 // fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
-func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int) (err error) {
-	defer func() {
-		if err == nil {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-			return
-		}
-	}()
-
+func doClient(ctx context.Context, listen string, tcpsp int, to string, fwmark int) (err error) {
 	log.Log("Connecting to HTTP server...")
 	if tcpsp == -1 {
 		laddr, err := net.ResolveTCPAddr("tcp", listen)
@@ -153,6 +160,5 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 		log.Logf("Failed forwarding first outstanding packet: %v", err)
 	}
 
-	tunnel(ctx, wgconn, rw)
-	return nil
+	return tunnel(ctx, wgconn, rw)
 }
