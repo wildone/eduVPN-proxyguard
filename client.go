@@ -23,7 +23,7 @@ var ClientProxyReady func()
 // it also calls the GotClientFD updater
 func configureSocket(mark int, sport int) net.Dialer {
 	d := net.Dialer{
-		Control: func(network, address string, conn syscall.RawConn) error {
+		Control: func(_, _ string, conn syscall.RawConn) error {
 			var seterr error
 			err := conn.Control(func(fd uintptr) {
 				if mark != -1 && runtime.GOOS == "linux" {
