@@ -113,6 +113,7 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 					if err == nil {
 						return conn, nil
 					}
+					log.Logf("dialing: '%s' failed with ip: '%s', error: %v", host, ip, err)
 				}
 				return conn, err
 			},
