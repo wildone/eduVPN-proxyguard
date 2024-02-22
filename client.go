@@ -38,6 +38,7 @@ func configureSocket(mark int, sport int) net.Dialer {
 		LocalAddr: &net.TCPAddr{
 			Port: sport,
 		},
+		Timeout: 10 * time.Second,
 	}
 	return d
 }
