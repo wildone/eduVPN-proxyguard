@@ -1,3 +1,9 @@
+# 0.3.0 (2024-02-22)
+
+- Client: Implement a --peer-ips flag to bypass DNS resolution
+- Client: Log each IP that is being connected to in the --peer-ip case
+- Client: Add a callback when the proxy is ready
+
 # 0.2.0 (2024-02-13)
 
 - Add a file descriptor callback mechanism to the client for eduvpn-common + Android integration
