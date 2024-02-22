@@ -16,6 +16,9 @@ import (
 // GotClientFD is a function that is called when the Client file descriptor has been obtained
 var GotClientFD func(fd int)
 
+// ClientProxyReady is called when the client proxy is ready
+var ClientProxyReady func()
+
 // configureSocket creates a TCP dial with fwmark/SO_MARK set
 // it also calls the GotClientFD updater
 func configureSocket(mark int, sport int) net.Dialer {
@@ -172,6 +175,10 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 		return fmt.Errorf("response body is not of type io.ReadWriteCloser: %T", rb)
 	}
 	log.Log("Connected to HTTP server")
+
+	if ClientProxyReady != nil {
+		ClientProxyReady()
+	}
 
 	udpaddr, err := net.ResolveUDPAddr("udp", listen)
 	if err != nil {
