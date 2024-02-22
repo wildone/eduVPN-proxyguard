@@ -7,6 +7,7 @@ PROJECT_NAME=$(basename "$(pwd)")
 PROJECT_VERSION=$(grep -o 'const version = "[^"]*' version.go | cut -d '"' -f 2)
 CODEBERG_API_KEY=$(cat "${XDG_CONFIG_HOME}/codeberg.org/api.key")
 RELEASE_DIR="${PWD}/release"
+KEY_ID=227FF3F8F829D9A9314D9EBA02BB8048BBFF222C
 mkdir -p "$RELEASE_DIR"
 
 if ! command -v "tar" >/dev/null; then
@@ -41,7 +42,8 @@ git archive --prefix "${PROJECT_NAME}-${PROJECT_VERSION}/" "${PROJECT_VERSION}" 
 tar -cJf "${RELEASE_DIR}/${PROJECT_NAME}-${PROJECT_VERSION}.tar.xz" "${PROJECT_NAME}-${PROJECT_VERSION}"
 
 # sign
-echo "signing with minisign, maybe prompted for password"
+echo "signing using gpg and minisign, maybe prompted for password"
+gpg --default-key ${KEY_ID} --armor --detach-sign "${RELEASE_DIR}/${PROJECT_NAME}-${PROJECT_VERSION}.tar.xz"
 minisign -Sm "${RELEASE_DIR}/${PROJECT_NAME}-${PROJECT_VERSION}.tar.xz"
 
 # create the release
