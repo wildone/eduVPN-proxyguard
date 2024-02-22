@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime"
 	"syscall"
 	"time"
@@ -42,9 +43,9 @@ func configureSocket(mark int, sport int) net.Dialer {
 }
 
 // Client runs doClient in a retry loop with a 5 second pause
-func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int) error {
+func Client(ctx context.Context, listen string, tcpsp int, to string, pips []string, fwmark int) error {
 	for {
-		err := doClient(ctx, listen, tcpsp, to, fwmark)
+		err := doClient(ctx, listen, tcpsp, to, pips, fwmark)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -63,7 +64,7 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, fwmark int
 // tcpsp is the TCP source port
 // to is the IP:PORT string for the TCP proxy on the other end
 // fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
-func doClient(ctx context.Context, listen string, tcpsp int, to string, fwmark int) (err error) {
+func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []string, fwmark int) (err error) {
 	log.Log("Connecting to HTTP server...")
 	if tcpsp == -1 {
 		laddr, err := net.ResolveTCPAddr("tcp", listen)
@@ -73,11 +74,48 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, fwmark i
 		tcpsp = laddr.Port
 	}
 
+	u, err := url.Parse(to)
+	if err != nil {
+		return err
+	}
+
+	peerhost := u.Host
+
 	// set fwmark on the socket
 	dialer := configureSocket(fwmark, tcpsp)
 	c := &http.Client{
 		Transport: &http.Transport{
-			Dial: dialer.Dial,
+			DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
+				// no peer ips defined
+				// just do the dial context with the configured dialer
+				if len(pips) == 0 {
+					return dialer.DialContext(ctx, network, addr)
+				}
+
+				// there are hardcoded ips given
+				// use that instead of a DNS request
+
+				// the address is given in hostname:port
+				host, port, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+
+				// the hostname is not the peer hostname
+				// return the default dialcontext
+				if host != peerhost {
+					return dialer.DialContext(ctx, network, addr)
+				}
+
+				// otherwise loop over the ips and return if one succeeds
+				for _, ip := range pips {
+					conn, err = dialer.DialContext(ctx, network, net.JoinHostPort(ip, port))
+					if err == nil {
+						return conn, nil
+					}
+				}
+				return conn, err
+			},
 		},
 	}
 
