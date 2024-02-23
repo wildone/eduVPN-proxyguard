@@ -48,6 +48,20 @@ func configureSocket(mark int, sport int) net.Dialer {
 
 // Client runs doClient in a retry loop with a 5 second pause
 func Client(ctx context.Context, listen string, tcpsp int, to string, pips []string, fwmark int) error {
+	// do a DNS request and fill peer IPs
+	// if none are given
+	if len(pips) == 0 {
+		u, err := url.Parse(to)
+		if err != nil {
+			return err
+		}
+
+		gpips, err := net.DefaultResolver.LookupHost(ctx, u.Host)
+		if err != nil {
+			return err
+		}
+		pips = gpips
+	}
 	for {
 		err := doClient(ctx, listen, tcpsp, to, pips, fwmark)
 		select {

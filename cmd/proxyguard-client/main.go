@@ -29,7 +29,7 @@ func main() {
 	tcpsp := flag.Int("tcpport", -1, "The PORT to use as the TCP source port. The default is -1, which indicates the same port as the UDP listen. Set this to zero to allocate a freely available port.")
 	to := flag.String("to", "", "The IP:PORT to which to send the converted TCP traffic to. Specify the server endpoint which also runs Proxyguard.")
 	version := flag.Bool("version", false, "Show version information")
-	pipss := flag.String("peer-ips", "", "Set the IP addresses (separated by commas) to use for the server peer such that DNS resolution does not fail due to either timing issues of starting the proxy or reconnection attempts")
+	pipss := flag.String("peer-ips", "", "Set the IP addresses (separated by commas) to use for the server peer such that DNS resolution does not fail due to either timing issues of starting the proxy e.g. on boot")
 	flag.Parse()
 
 	pips := strings.Split(*pipss, ",")
