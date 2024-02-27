@@ -13,24 +13,44 @@ import (
 	"time"
 )
 
-// GotClientFD is a function that is called when the Client file descriptor has been obtained
-var GotClientFD func(fd int)
+// Client represents a Proxyguard client
+type Client struct {
+	// Listen is the IP:PORT for the UDP listener
+	Listen string
 
-// ClientProxyReady is called when the client proxy is ready
-var ClientProxyReady func()
+	// TCPSourcePort is the source port for the TCP connection
+	TCPSourcePort int
+
+	// fwmark sets the SO_MARK to use
+	// Set to 0 or negative to disable
+	// This is only set on Linux
+	Fwmark int
+
+	// Ready is the callback that is called when the Proxy is connected to the peer
+	// This only gets called on first connect of `Tunnel`
+	Ready func()
+
+	// SetupSocket is called when the socket is setting up
+	// fd is the file descriptor of the socket
+	// pips is the peer ips of the socket
+	SetupSocket func(fd int, pips []string)
+
+	// httpc is the cached HTTP client
+	httpc *http.Client
+}
 
 // configureSocket creates a TCP dial with fwmark/SO_MARK set
 // it also calls the GotClientFD updater
-func configureSocket(mark int, sport int) net.Dialer {
+func (c *Client) configureSocket(pips []string) net.Dialer {
 	d := net.Dialer{
 		Control: func(_, _ string, conn syscall.RawConn) error {
 			var seterr error
 			err := conn.Control(func(fd uintptr) {
-				if mark != -1 && runtime.GOOS == "linux" {
-					seterr = socketFWMark(int(fd), mark)
+				if c.Fwmark > 0 && runtime.GOOS == "linux" {
+					seterr = socketFWMark(int(fd), c.Fwmark)
 				}
-				if GotClientFD != nil {
-					GotClientFD(int(fd))
+				if c.SetupSocket != nil {
+					c.SetupSocket(int(fd), pips)
 				}
 			})
 			if err != nil {
@@ -39,19 +59,20 @@ func configureSocket(mark int, sport int) net.Dialer {
 			return seterr
 		},
 		LocalAddr: &net.TCPAddr{
-			Port: sport,
+			Port: c.TCPSourcePort,
 		},
 		Timeout: 10 * time.Second,
 	}
 	return d
 }
 
-// Client runs doClient in a retry loop with a 5 second pause
-func Client(ctx context.Context, listen string, tcpsp int, to string, pips []string, fwmark int) error {
+// Tunnel tunnels a connection to peer `peer`
+// The peer has IP addresses `pips`, if empty a DNS request is done
+func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 	// do a DNS request and fill peer IPs
 	// if none are given
 	if len(pips) == 0 {
-		u, err := url.Parse(to)
+		u, err := url.Parse(peer)
 		if err != nil {
 			return err
 		}
@@ -62,8 +83,9 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, pips []str
 		}
 		pips = gpips
 	}
+	first := true
 	for {
-		err := doClient(ctx, listen, tcpsp, to, pips, fwmark)
+		err := c.tryTunnel(ctx, peer, pips, first)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -74,25 +96,48 @@ func Client(ctx context.Context, listen string, tcpsp int, to string, pips []str
 		} else {
 			log.Logf("Retrying as client exited cleanly but context is not canceled yet")
 		}
+		first = false
 	}
 }
 
-// doClient creates a client that forwards UDP to TCP
-// listen is the IP:PORT port
-// tcpsp is the TCP source port
-// to is the IP:PORT string for the TCP proxy on the other end
-// fwmark is the mark to set on the TCP socket such that we do not get a routing loop, use -1 to disable setting fwmark
-func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []string, fwmark int) (err error) {
-	log.Log("Connecting to HTTP server...")
-	if tcpsp == -1 {
-		laddr, err := net.ResolveTCPAddr("tcp", listen)
-		if err != nil {
-			return err
-		}
-		tcpsp = laddr.Port
+func (c *Client) dialContext(ctx context.Context, dialer net.Dialer, network string, addr string, peerhost string, pips []string) (conn net.Conn, err error) {
+	// no peer ips defined
+	// just do the dial context with the configured dialer
+	if len(pips) == 0 {
+		return dialer.DialContext(ctx, network, addr)
 	}
 
-	u, err := url.Parse(to)
+	// there are hardcoded ips given
+	// use that instead of a DNS request
+
+	// the address is given in hostname:port
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// the hostname is not the peer hostname
+	// return the default dialcontext
+	if host != peerhost {
+		return dialer.DialContext(ctx, network, addr)
+	}
+
+	// otherwise loop over the ips and return if one succeeds
+	for _, ip := range pips {
+		conn, err = dialer.DialContext(ctx, network, net.JoinHostPort(ip, port))
+		if err == nil {
+			return conn, nil
+		}
+		log.Logf("dialing: '%s' failed with ip: '%s', error: %v", host, ip, err)
+	}
+	return conn, err
+}
+
+// tryTunnel tries to tunnel the connection by connecting to HTTP peer `to` with IPs `pips`
+// the boolean `first` is set if it's the first connect to the server
+func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, first bool) (err error) {
+	log.Log("Connecting to HTTP server...")
+	u, err := url.Parse(peer)
 	if err != nil {
 		return err
 	}
@@ -100,45 +145,18 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 	peerhost := u.Host
 
 	// set fwmark on the socket
-	dialer := configureSocket(fwmark, tcpsp)
-	c := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
-				// no peer ips defined
-				// just do the dial context with the configured dialer
-				if len(pips) == 0 {
-					return dialer.DialContext(ctx, network, addr)
-				}
-
-				// there are hardcoded ips given
-				// use that instead of a DNS request
-
-				// the address is given in hostname:port
-				host, port, err := net.SplitHostPort(addr)
-				if err != nil {
-					return nil, err
-				}
-
-				// the hostname is not the peer hostname
-				// return the default dialcontext
-				if host != peerhost {
-					return dialer.DialContext(ctx, network, addr)
-				}
-
-				// otherwise loop over the ips and return if one succeeds
-				for _, ip := range pips {
-					conn, err = dialer.DialContext(ctx, network, net.JoinHostPort(ip, port))
-					if err == nil {
-						return conn, nil
-					}
-					log.Logf("dialing: '%s' failed with ip: '%s', error: %v", host, ip, err)
-				}
-				return conn, err
-			},
+	dialer := c.configureSocket(pips)
+	if c.httpc == nil {
+		c.httpc = &http.Client{}
+	}
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
+			return c.dialContext(ctx, dialer, network, addr, peerhost, pips)
 		},
 	}
+	c.httpc.Transport = transport
 
-	req, err := http.NewRequestWithContext(ctx, "GET", to, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", peer, nil)
 	if err != nil {
 		return err
 	}
@@ -147,7 +165,7 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 	req.Header.Set("Connection", "Upgrade")
 	req.Header.Set("Upgrade", UpgradeProto)
 
-	resp, err := c.Do(req)
+	resp, err := c.httpc.Do(req)
 	if err != nil {
 		return err
 	}
@@ -190,16 +208,16 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 	}
 	log.Log("Connected to HTTP server")
 
-	if ClientProxyReady != nil {
-		ClientProxyReady()
+	if c.Ready != nil && first {
+		c.Ready()
 	}
 
-	udpaddr, err := net.ResolveUDPAddr("udp", listen)
+	udpaddr, err := net.ResolveUDPAddr("udp", c.Listen)
 	if err != nil {
 		return err
 	}
 	log.Log("Waiting for first UDP packet...")
-	wgaddr, first, err := inferUDPAddr(ctx, udpaddr)
+	wgaddr, packet, err := inferUDPAddr(ctx, udpaddr)
 	if err != nil {
 		return err
 	}
@@ -215,7 +233,7 @@ func doClient(ctx context.Context, listen string, tcpsp int, to string, pips []s
 	rw := bufio.NewReadWriter(bufio.NewReader(rwc), bufio.NewWriter(rwc))
 
 	// first forward the outstanding packet
-	err = writeTCP(rw.Writer, first, len(first)-hdrLength)
+	err = writeTCP(rw.Writer, packet, len(packet)-hdrLength)
 	if err != nil {
 		log.Logf("Failed forwarding first outstanding packet: %v", err)
 	}

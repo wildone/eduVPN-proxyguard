@@ -75,7 +75,13 @@ func main() {
 			// do nothing
 		}
 	}()
-	err := proxyguard.Client(ctx, *listen, *tcpsp, *to, pips, *fwmark)
+
+	client := proxyguard.Client{
+		Listen:        *listen,
+		TCPSourcePort: *tcpsp,
+		Fwmark:        *fwmark,
+	}
+	err := client.Tunnel(ctx, *to, pips)
 	if err != nil {
 		select {
 		case <-ctx.Done():

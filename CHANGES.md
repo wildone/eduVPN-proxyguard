@@ -1,3 +1,7 @@
+# 0.4.0
+
+- Client: Make it a struct type for a nicer Go API
+
 # 0.3.0 (2024-02-22)
 
 - Client: Implement a --peer-ips flag to bypass DNS resolution
