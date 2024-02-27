@@ -147,7 +147,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error 
 	defer close(cancel)
 
 	// make the TCP reader timeout after 60 seconds
-	tr := newTimeoutReader(ctx, rw.Reader, 60 * time.Second)
+	tr := newTimeoutReader(ctx, rw.Reader, 60*time.Second)
 	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	wg.Add(1)

@@ -22,7 +22,7 @@ func newTimeoutReader(ctx context.Context, parent *bufio.Reader, timeout time.Du
 }
 
 type retReader struct {
-	n int
+	n   int
 	err error
 }
 
@@ -39,7 +39,7 @@ func (t *timeoutReader) Read(b []byte) (n int, err error) {
 	select {
 	case <-ctx.Done():
 		return 0, errors.New("TCP reader timeout reached")
-	case got := <- c:
+	case got := <-c:
 		return got.n, got.err
 	}
 }
