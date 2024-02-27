@@ -21,7 +21,7 @@ type Client struct {
 	// TCPSourcePort is the source port for the TCP connection
 	TCPSourcePort int
 
-	// fwmark sets the SO_MARK to use
+	// Fwmark sets the SO_MARK to use
 	// Set to 0 or negative to disable
 	// This is only set on Linux
 	Fwmark int
@@ -32,7 +32,7 @@ type Client struct {
 
 	// SetupSocket is called when the socket is setting up
 	// fd is the file descriptor of the socket
-	// pips is the peer ips of the socket
+	// pips are the ips of the peer that the socket will attempt to connect to
 	SetupSocket func(fd int, pips []string)
 
 	// httpc is the cached HTTP client
