@@ -61,7 +61,7 @@ func writeTCP(w *bufio.Writer, buf []byte, n int) error {
 
 // tcpToUDP reads from the TCP reader r and writes packets to the udpc connection
 // The incoming TCP packets are encapsulated UDP packets with a 2 byte length prefix
-func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn) error {
+func tcpToUDP(r *timeoutReader, udpc *net.UDPConn) error {
 	var bufr [bufSize]byte
 	todo := 0
 	for {
@@ -146,6 +146,8 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error 
 	}()
 	defer close(cancel)
 
+	// make the TCP reader timeout after 60 seconds
+	tr := newTimeoutReader(ctx, rw.Reader, 60 * time.Second)
 	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -160,7 +162,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := tcpToUDP(rw.Reader, udpc)
+		err := tcpToUDP(tr, udpc)
 		if err != nil {
 			errChan <- err
 		}
