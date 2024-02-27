@@ -1,6 +1,7 @@
 # 0.4.0
 
 - Client: Make it a struct type for a nicer Go API
+- Client: Set the default source port to 0
 
 # 0.3.0 (2024-02-22)
 
