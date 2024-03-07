@@ -48,8 +48,11 @@ func (c *Client) configureSocket(pips []string) net.Dialer {
 			err := conn.Control(func(fd uintptr) {
 				if c.TCPSourcePort > 0 && runtime.GOOS == "linux" {
 					// if we fail to set the reuse port option
-					// it is fine
-					_ = socketReuseSport(int(fd))
+					// it is fine, we only log
+					sporterr := socketReuseSport(int(fd))
+					if sporterr != nil {
+						log.Logf("error re-using source port: %v", sporterr)
+					}
 				}
 				if c.Fwmark > 0 && runtime.GOOS == "linux" {
 					seterr = socketFWMark(int(fd), c.Fwmark)
