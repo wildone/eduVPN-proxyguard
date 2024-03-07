@@ -46,6 +46,11 @@ func (c *Client) configureSocket(pips []string) net.Dialer {
 		Control: func(_, _ string, conn syscall.RawConn) error {
 			var seterr error
 			err := conn.Control(func(fd uintptr) {
+				if c.TCPSourcePort > 0 && runtime.GOOS == "linux" {
+					// if we fail to set the reuse port option
+					// it is fine
+					_ = socketReuseSport(int(fd))
+				}
 				if c.Fwmark > 0 && runtime.GOOS == "linux" {
 					seterr = socketFWMark(int(fd), c.Fwmark)
 				}
