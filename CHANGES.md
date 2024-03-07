@@ -2,6 +2,9 @@
 
 - Client: Make it a struct type for a nicer Go API
 - Client: Set the default source port to 0
+- Client + Server: Make the TCP reader timeout after 60 seconds
+- Client: Ability to re-use source port on Linux, for reconnecting purposes
+- Client: Do a DNS request inside Proxyguard if no --peer-ips are set and cache it so that reconnecting cannot fail
 
 # 0.3.0 (2024-02-22)
 
