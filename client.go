@@ -231,22 +231,7 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 	// is this needed?
 	rb := resp.Body
 	resp.Body = nil
-
-	// TODO: clean this up?
-	cancel := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				rb.Close()
-				return
-			case <-cancel:
-				rb.Close()
-				return
-			}
-		}
-	}()
-	defer close(cancel)
+	defer rb.Close()
 
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		return fmt.Errorf("status is not switching protocols, got: '%v'", resp.StatusCode)
