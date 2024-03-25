@@ -47,6 +47,9 @@ type Client struct {
 	resMu sync.Mutex
 }
 
+// SignalRestart 'signals' to the Client that it should restart, meaning: reconnect to the server with the cached DNS
+// This SHOULD be called when the VPN client switches networks such that you do not have to wait for a long
+// 60 second timeout
 func (c *Client) SignalRestart() error {
 	c.resMu.Lock()
 	defer c.resMu.Unlock()
