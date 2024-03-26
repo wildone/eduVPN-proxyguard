@@ -103,10 +103,10 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 	c.resChan = make(chan int)
 	c.resMu.Unlock()
 	defer func() {
-	    c.resMu.Lock()
-	    close(c.resChan)
-	    c.resChan = nil
-	    c.resMu.Unlock()
+		c.resMu.Lock()
+		close(c.resChan)
+		c.resChan = nil
+		c.resMu.Unlock()
 	}()
 	// do a DNS request and fill peer IPs
 	// if none are given
@@ -132,23 +132,23 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 		// or if the context is already done, do nothing
 		go func() {
 			select {
-			case res := <- c.resChan:
+			case res := <-c.resChan:
 				if res == 1 {
 					cancel()
 				}
 				return
-			case <- ctx.Done():
+			case <-ctx.Done():
 				return
-			case <- cctx.Done():
+			case <-cctx.Done():
 				return
 			}
 		}()
 
 		err := c.tryTunnel(cctx, peer, pips, first)
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return ctx.Err()
-		case <- cctx.Done():
+		case <-cctx.Done():
 			continue
 		case <-time.After(2 * time.Second):
 		}
