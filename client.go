@@ -40,8 +40,8 @@ type Client struct {
 	// httpc is the cached HTTP client
 	httpc *http.Client
 
-	// resChan is the channel for restarting proxyguard
-	resChan chan int
+	// resFunc is the function to call when the client should restart
+	resFunc context.CancelFunc
 
 	// resMu is the mutex that protects the res chan
 	resMu sync.Mutex
@@ -53,11 +53,11 @@ type Client struct {
 func (c *Client) SignalRestart() error {
 	c.resMu.Lock()
 	defer c.resMu.Unlock()
-	if c.resChan == nil {
-		return errors.New("no restarting channel available")
+	if c.resFunc == nil {
+		return errors.New("no restarting function available")
 	}
 
-	c.resChan <- 1
+	c.resFunc()
 	return nil
 }
 
@@ -99,15 +99,6 @@ func (c *Client) configureSocket(pips []string) net.Dialer {
 // Tunnel tunnels a connection to peer `peer`
 // The peer has IP addresses `pips`, if empty a DNS request is done
 func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
-	c.resMu.Lock()
-	c.resChan = make(chan int)
-	c.resMu.Unlock()
-	defer func() {
-		c.resMu.Lock()
-		close(c.resChan)
-		c.resChan = nil
-		c.resMu.Unlock()
-	}()
 	// do a DNS request and fill peer IPs
 	// if none are given
 	if len(pips) == 0 {
@@ -124,31 +115,15 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 	}
 	first := true
 	for {
-		// create a child context for restarting
-		cctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		// cancel the context if restarting is issued
-		// or if the context is already done, do nothing
-		go func() {
-			select {
-			case res := <-c.resChan:
-				if res == 1 {
-					cancel()
-				}
-				return
-			case <-ctx.Done():
-				return
-			case <-cctx.Done():
-				return
-			}
-		}()
-
-		err := c.tryTunnel(cctx, peer, pips, first)
+		rctx, cancel := context.WithCancel(ctx)
+		c.resMu.Lock()
+		c.resFunc = cancel
+		c.resMu.Unlock()
+		err := c.tryTunnel(rctx, peer, pips, first)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-cctx.Done():
+		case <-rctx.Done():
 			continue
 		case <-time.After(2 * time.Second):
 		}
