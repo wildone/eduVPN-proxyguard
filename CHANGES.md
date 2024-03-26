@@ -1,3 +1,7 @@
+# UNRELEASED
+
+- Client: Support restarting using a `SignalRestart` function
+
 # 0.4.0
 
 - Client: Make it a struct type for a nicer Go API
