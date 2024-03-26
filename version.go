@@ -6,10 +6,10 @@ import (
 )
 
 // version is the current version
-const version = "0.4.0"
+const version = "0.5.0"
 
 // versionReleased sets whether or not the current version is released yet
-const versionReleased = true
+const versionReleased = false
 
 // Version() gets the version in the following order:
 // - Gets a release version if it detects it is a release
