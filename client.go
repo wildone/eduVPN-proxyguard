@@ -107,7 +107,7 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 			return err
 		}
 
-		gpips, err := net.DefaultResolver.LookupHost(ctx, u.Host)
+		gpips, err := net.DefaultResolver.LookupHost(ctx, u.Hostname())
 		if err != nil {
 			return err
 		}

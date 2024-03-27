@@ -1,6 +1,7 @@
 # UNRELEASED
 
 - Client: Support restarting using a `SignalRestart` function
+- Client: Ensure the hostname is used for a DNS request instead of the host:port
 
 # 0.4.0
 
