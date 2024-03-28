@@ -21,7 +21,7 @@ This tool is focused on a client-server model. This proxy thus needs to run for 
 
 ## Client example
 
-This example listens on local UDP port 1337 and forwards Websocket packets to vpn.example.com
+This example listens on local UDP port 1337 and forwards TCP packets (with a HTTP Upgrade handshake) to vpn.example.com
 
 ```bash
 proxyguard-client --listen 127.0.0.1:1337 --to http://vpn.example.com
