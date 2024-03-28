@@ -1,4 +1,4 @@
-# Proxyguard
+# ProxyGuard
 
 Proxy WireGuard UDP connections over HTTP(s).
 

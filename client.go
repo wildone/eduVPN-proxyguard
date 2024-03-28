@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Client represents a Proxyguard client
+// Client represents a ProxyGuard client
 type Client struct {
 	// Listen is the IP:PORT for the UDP listener
 	Listen string
