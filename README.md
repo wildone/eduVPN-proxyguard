@@ -1,6 +1,6 @@
 # ProxyGuard
 
-Proxy WireGuard UDP connections over HTTP(s).
+Proxy UDP connections over HTTP(s). The main use case is to proxy WireGuard packets.
 
 It does this by doing a HTTP upgrade request similar to how websockets work.
 
