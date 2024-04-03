@@ -3,14 +3,12 @@ package proxyguard
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -39,26 +37,6 @@ type Client struct {
 
 	// httpc is the cached HTTP client
 	httpc *http.Client
-
-	// resFunc is the function to call when the client should restart
-	resFunc context.CancelFunc
-
-	// resMu is the mutex that protects the res chan
-	resMu sync.Mutex
-}
-
-// SignalRestart 'signals' to the Client that it should restart, meaning: reconnect to the server with the cached DNS
-// This SHOULD be called when the VPN client switches networks such that you do not have to wait for a long
-// 60 second timeout
-func (c *Client) SignalRestart() error {
-	c.resMu.Lock()
-	defer c.resMu.Unlock()
-	if c.resFunc == nil {
-		return errors.New("no restarting function available")
-	}
-
-	c.resFunc()
-	return nil
 }
 
 // configureSocket creates a TCP dial with fwmark/SO_MARK set
@@ -115,16 +93,10 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 	}
 	first := true
 	for {
-		rctx, cancel := context.WithCancel(ctx)
-		c.resMu.Lock()
-		c.resFunc = cancel
-		c.resMu.Unlock()
-		err := c.tryTunnel(rctx, peer, pips, first)
+		err := c.tryTunnel(ctx, peer, pips, first)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-rctx.Done():
-			continue
 		case <-time.After(2 * time.Second):
 		}
 		if err != nil {
