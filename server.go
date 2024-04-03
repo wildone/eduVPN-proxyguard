@@ -79,11 +79,16 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// tunnel the traffic using the buffered connection
 	err = tunnel(r.Context(), wgconn, brw)
-	if err != nil {
-		log.Logf("Tunneling UDP<->TCP client exited with error: %v", err)
-	} else {
-		log.Logf("Tunneling UDP<->TCP client exited cleanly")
+	if err == nil {
+		return
 	}
+	if errors.Is(err, io.EOF) {
+		return
+	}
+	if errors.Is(err, ErrReaderTimeout) {
+		return
+	}
+	log.Logf("Tunneling UDP<->TCP client exited with error: %v", err)
 }
 
 // Server creates a server that forwards TCP to UDP
