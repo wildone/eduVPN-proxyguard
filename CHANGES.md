@@ -1,7 +1,8 @@
 # UNRELEASED
 
-- Client: Support restarting using a `SignalRestart` function
 - Client: Ensure the hostname is used for a DNS request instead of the host:port
+- Server: Do not spam log by not logging EOF, TCP reader or clean exits
+- General: Rename Proxyguard to ProxyGuard
 
 # 0.4.0
 
