@@ -3,6 +3,7 @@ package proxyguard
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -99,6 +100,11 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 			return ctx.Err()
 		case <-time.After(2 * time.Second):
 		}
+		var fErr *fatalError
+		if errors.As(err, &fErr) {
+			log.Logf("%v, exiting...", fErr)
+			return fErr
+		}
 		if err != nil {
 			log.Logf("Retrying as client exited with error: %v", err)
 		} else {
@@ -121,7 +127,7 @@ func (c *Client) dialContext(ctx context.Context, dialer net.Dialer, network str
 	// the address is given in hostname:port
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return nil, err
+		return nil, &fatalError{Err: err}
 	}
 
 	// the hostname is not the peer hostname
@@ -141,13 +147,21 @@ func (c *Client) dialContext(ctx context.Context, dialer net.Dialer, network str
 	return conn, err
 }
 
+type fatalError struct {
+	Err error
+}
+
+func (fe *fatalError) Error() string {
+	return fmt.Sprintf("fatal error occurred: %v", fe.Err.Error())
+}
+
 // tryTunnel tries to tunnel the connection by connecting to HTTP peer `to` with IPs `pips`
 // the boolean `first` is set if it's the first connect to the server
 func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, first bool) (err error) {
 	log.Log("Connecting to HTTP server...")
 	u, err := url.Parse(peer)
 	if err != nil {
-		return err
+		return &fatalError{Err: err}
 	}
 
 	peerhost := u.Host
@@ -166,7 +180,7 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 
 	req, err := http.NewRequestWithContext(ctx, "GET", peer, nil)
 	if err != nil {
-		return err
+		return &fatalError{Err: err}
 	}
 
 	// upgrade the connection to wireguard
@@ -184,20 +198,20 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 	defer rb.Close()
 
 	if resp.StatusCode != http.StatusSwitchingProtocols {
-		return fmt.Errorf("status is not switching protocols, got: '%v'", resp.StatusCode)
+		return &fatalError{Err: fmt.Errorf("status is not switching protocols, got: '%v'", resp.StatusCode)}
 	}
 
 	if resp.Header.Get("Connection") != "Upgrade" {
-		return fmt.Errorf("the 'Connection' header is not 'Upgrade', got: '%v'", resp.Header.Get("Connection"))
+		return &fatalError{Err: fmt.Errorf("the 'Connection' header is not 'Upgrade', got: '%v'", resp.Header.Get("Connection"))}
 	}
 
 	if resp.Header.Get("Upgrade") != UpgradeProto {
-		return fmt.Errorf("upgrade header is not '%v', got: '%v'", UpgradeProto, resp.Header.Get("Upgrade"))
+		return &fatalError{Err: fmt.Errorf("upgrade header is not '%v', got: '%v'", UpgradeProto, resp.Header.Get("Upgrade"))}
 	}
 
 	rwc, ok := rb.(io.ReadWriteCloser)
 	if !ok {
-		return fmt.Errorf("response body is not of type io.ReadWriteCloser: %T", rb)
+		return &fatalError{Err: fmt.Errorf("response body is not of type io.ReadWriteCloser: %T", rb)}
 	}
 	log.Log("Connected to HTTP server")
 

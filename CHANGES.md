@@ -1,6 +1,7 @@
 # UNRELEASED
 
 - Client: Ensure the hostname is used for a DNS request instead of the host:port
+- Client: Mark some errors as 'fatal' such that retrying does not happen
 - Server: Do not spam log by not logging EOF, TCP reader or clean exits
 - General: Rename Proxyguard to ProxyGuard
 
