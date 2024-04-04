@@ -34,8 +34,8 @@ func restartUntilErr(ctx context.Context, work func(context.Context, bool) error
 		// we consider it as failed
 		if et.Sub(st) < d {
 			// max tries exceeded now
-			if failed == len(wt) - 1 {
-			    return ErrMaxRestarts
+			if failed == len(wt)-1 {
+				return ErrMaxRestarts
 			}
 			failed = (failed + 1) % len(wt)
 		} else {
