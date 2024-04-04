@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -26,14 +27,14 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Upgrade", UpgradeProto)
 	w.Header().Set("Connection", "Upgrade")
 
-	if r.Header.Get("Connection") != "Upgrade" {
+	if !strings.EqualFold(r.Header.Get("Connection"), "Upgrade") {
 		err := fmt.Errorf("the 'Connection' header is not 'Upgrade', got: '%v'", r.Header.Get("Connection"))
 		log.Logf("Error accepting client: %v", err)
 		http.Error(w, err.Error(), http.StatusUpgradeRequired)
 		return
 	}
 
-	if r.Header.Get("Upgrade") != UpgradeProto {
+	if !strings.EqualFold(r.Header.Get("Upgrade"), UpgradeProto) {
 		err := fmt.Errorf("the 'Upgrade' header is not '%s', got: '%v'", UpgradeProto, r.Header.Get("Upgrade"))
 		log.Logf("Error accepting client: %v", err)
 		http.Error(w, err.Error(), http.StatusUpgradeRequired)

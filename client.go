@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -219,11 +220,11 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 		return &fatalError{Err: fmt.Errorf("status is not switching protocols, got: '%v'", resp.StatusCode)}
 	}
 
-	if resp.Header.Get("Connection") != "Upgrade" {
+	if !strings.EqualFold(resp.Header.Get("Connection"), "Upgrade") {
 		return &fatalError{Err: fmt.Errorf("the 'Connection' header is not 'Upgrade', got: '%v'", resp.Header.Get("Connection"))}
 	}
 
-	if resp.Header.Get("Upgrade") != UpgradeProto {
+	if !strings.EqualFold(resp.Header.Get("Upgrade"), UpgradeProto) {
 		return &fatalError{Err: fmt.Errorf("upgrade header is not '%v', got: '%v'", UpgradeProto, resp.Header.Get("Upgrade"))}
 	}
 
