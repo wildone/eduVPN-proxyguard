@@ -23,7 +23,7 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// upgrade to wireguard protocol
+	// upgrade to UDP over TCP protocol
 	w.Header().Set("Upgrade", UpgradeProto)
 	w.Header().Set("Connection", "Upgrade")
 
@@ -49,7 +49,7 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// switch protocol to wireguard
+	// switch protocol to UDP over TCP
 	w.WriteHeader(http.StatusSwitchingProtocols)
 
 	// hijack the connection so that we get a TCP stream

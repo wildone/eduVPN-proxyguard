@@ -6,6 +6,7 @@
 - Server: Do not spam log by not logging EOF, TCP reader or clean exits
 - Server: Set Upgrade and Connection headers sooner
 - Client+Server: Compare headers case insensitive
+- Client+Server: Set Upgrade protocol from wireguard to UoTLV/1: UDP over TCP Length Value version 1
 - General: Rename Proxyguard to ProxyGuard
 
 # 0.4.0

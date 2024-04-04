@@ -202,7 +202,7 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 		return &fatalError{Err: err}
 	}
 
-	// upgrade the connection to wireguard
+	// upgrade the connection to UDP over TCP
 	req.Header.Set("Connection", "Upgrade")
 	req.Header.Set("Upgrade", UpgradeProto)
 
