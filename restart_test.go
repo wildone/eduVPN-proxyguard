@@ -11,7 +11,7 @@ func TestRestartUntilErr(t *testing.T) {
 	// test boolean 'first' argument
 	gf := false
 
-	restartUntilErr(context.Background(), func(_ context.Context, first bool) error {
+	_ = restartUntilErr(context.Background(), func(_ context.Context, first bool) error {
 		gf = first
 		return nil
 	}, []time.Duration{0 * time.Second}, time.Duration(1*time.Hour))
