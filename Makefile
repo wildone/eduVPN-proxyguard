@@ -19,6 +19,9 @@ lint:
 sloc:
 	cloc --include-ext=go .
 
+test:
+	go test -v ./...
+
 clean:
 	rm -f proxyguard-client
 	rm -f proxyguard-server
