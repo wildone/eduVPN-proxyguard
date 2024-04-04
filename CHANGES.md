@@ -1,4 +1,4 @@
-# UNRELEASED
+# 1.0.0 (2024-04-04)
 
 - Client: Ensure the hostname is used for a DNS request instead of the host:port
 - Client: Mark some errors as 'fatal' such that retrying does not happen
@@ -9,7 +9,7 @@
 - Client+Server: Set Upgrade protocol from wireguard to UoTLV/1: UDP over TCP Length Value version 1
 - General: Rename Proxyguard to ProxyGuard
 
-# 0.4.0
+# 0.4.0 (2024-03-11)
 
 - Client: Make it a struct type for a nicer Go API
 - Client: Set the default source port to 0
