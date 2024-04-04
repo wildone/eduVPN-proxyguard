@@ -92,14 +92,25 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 		}
 		pips = gpips
 	}
-	first := true
-	for {
+
+	// If the tunnel exits within this delta, that restart is marked as 'failed'
+	d := time.Duration(10 * time.Second)
+
+	// the times to wait, the restartUntilErr function loops through these
+	wt := []time.Duration{
+		time.Duration(1 * time.Second),
+		time.Duration(2 * time.Second),
+		time.Duration(4 * time.Second),
+		time.Duration(8 * time.Second),
+	}
+
+	// store the last error
+	var lerr error
+
+	err := restartUntilErr(ctx, func(ctx context.Context, first bool) error {
 		err := c.tryTunnel(ctx, peer, pips, first)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(2 * time.Second):
-		}
+
+		// if a fatal error is returned, exit immediately
 		var fErr *fatalError
 		if errors.As(err, &fErr) {
 			log.Logf("%v, exiting...", fErr)
@@ -107,11 +118,18 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 		}
 		if err != nil {
 			log.Logf("Retrying as client exited with error: %v", err)
+			lerr = err
 		} else {
 			log.Logf("Retrying as client exited cleanly but context is not canceled yet")
 		}
-		first = false
+		return nil
+	}, wt, d)
+
+	if errors.Is(err, ErrMaxRestarts) && lerr != nil {
+		return fmt.Errorf("%v, last error: %v", err.Error(), lerr.Error())
 	}
+
+	return err
 }
 
 func (c *Client) dialContext(ctx context.Context, dialer net.Dialer, network string, addr string, peerhost string, pips []string) (conn net.Conn, err error) {
