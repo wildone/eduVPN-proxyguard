@@ -4,6 +4,7 @@
 - Client: Mark some errors as 'fatal' such that retrying does not happen
 - Client: Loop using a more fancy restart loop that uses a variable wait time and max restarts
 - Server: Do not spam log by not logging EOF, TCP reader or clean exits
+- Server: Set Upgrade and Connection headers sooner
 - General: Rename Proxyguard to ProxyGuard
 
 # 0.4.0

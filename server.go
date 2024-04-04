@@ -22,6 +22,10 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// upgrade to wireguard protocol
+	w.Header().Set("Upgrade", UpgradeProto)
+	w.Header().Set("Connection", "Upgrade")
+
 	if r.Header.Get("Connection") != "Upgrade" {
 		err := fmt.Errorf("the 'Connection' header is not 'Upgrade', got: '%v'", r.Header.Get("Connection"))
 		log.Logf("Error accepting client: %v", err)
@@ -35,10 +39,6 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUpgradeRequired)
 		return
 	}
-
-	// upgrade to wireguard protocol
-	w.Header().Set("Upgrade", UpgradeProto)
-	w.Header().Set("Connection", "Upgrade")
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
