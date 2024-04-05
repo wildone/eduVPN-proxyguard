@@ -54,7 +54,7 @@ func TestRestartUntilErr(t *testing.T) {
 		t.Fatalf("restart count: %v, not equal to want count: %v", restarted, n)
 	}
 
-	if time.Duration(et.Sub(st)) < time.Duration(3500 * time.Millisecond) {
+	if time.Duration(et.Sub(st)) < time.Duration(3500*time.Millisecond) {
 		t.Fatalf("execution time did not take more or equal to 3.5s: %v", et.Sub(st))
 	}
 }
