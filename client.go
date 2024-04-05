@@ -95,6 +95,7 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 	}
 
 	// If the tunnel exits within this delta, that restart is marked as 'failed'
+	// and the next wait is cycled through
 	d := time.Duration(10 * time.Second)
 
 	// the times to wait, the restartUntilErr function loops through these
@@ -103,10 +104,8 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 		time.Duration(2 * time.Second),
 		time.Duration(4 * time.Second),
 		time.Duration(8 * time.Second),
+		time.Duration(10 * time.Second),
 	}
-
-	// store the last error
-	var lerr error
 
 	err := restartUntilErr(ctx, func(ctx context.Context, first bool) error {
 		err := c.tryTunnel(ctx, peer, pips, first)
@@ -119,16 +118,11 @@ func (c *Client) Tunnel(ctx context.Context, peer string, pips []string) error {
 		}
 		if err != nil {
 			log.Logf("Retrying as client exited with error: %v", err)
-			lerr = err
 		} else {
 			log.Logf("Retrying as client exited cleanly but context is not canceled yet")
 		}
 		return nil
 	}, wt, d)
-
-	if errors.Is(err, ErrMaxRestarts) && lerr != nil {
-		return fmt.Errorf("%v, last error: %v", err.Error(), lerr.Error())
-	}
 
 	return err
 }
