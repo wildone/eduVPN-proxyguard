@@ -1,3 +1,7 @@
+# 1.0.1 (2024-04-05)
+
+- Client: Remove the abort on max restart and instead wait 10s
+
 # 1.0.0 (2024-04-04)
 
 - Client: Ensure the hostname is used for a DNS request instead of the host:port
