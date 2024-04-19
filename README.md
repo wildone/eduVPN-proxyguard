@@ -33,6 +33,12 @@ WireGuard is listening on port 443, you can add the following:
 Environment=TO=127.0.0.1:443
 ```
 
+## DEB/RPM packages
+
+Currently there are DEB/RPM packages available in eduVPN's development repository, [follow the eduVPN docs to add the repo](https://docs.eduvpn.org/server/v3/development-repo.html).
+
+And then install ProxyGuard using: `sudo apt -y install proxyguard-client` or `sudo dnf -y install proxyguard-client` 
+
 # Running
 This tool is focused on a client-server model. This proxy thus needs to run for every client and for a server. The server mode accepts multiple clients.
 
@@ -74,6 +80,12 @@ The following projects gave me an idea how I could implement this best, most not
 - https://github.com/mullvad/udp-over-tcp
 - https://github.com/rfc1036/udptunnel
 - https://nhooyr.io/websocket
+
+# Deployment
+For details on deployment, [see here](./deploy.md).
+
+# Technical docs
+For technical docs, [see here](./technical.md).
 
 # License
 [MIT](./LICENSE)
