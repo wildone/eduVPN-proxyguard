@@ -74,18 +74,18 @@ This example starts a HTTP server on TCP port 1337 and forwards UDP packets to l
 proxyguard-server --listen 0.0.0.0:1337 --to 127.0.0.1:51820
 ```
 
+# Deployment
+For details on deployment, [see here](./deploy.md).
+
+# Technical docs
+For technical docs, [see here](./technical.md).
+
 # Acknowledgements & Thanks
 
 The following projects gave me an idea how I could implement this best, most notably how to do the UDP <-> TCP conversion with a custom header. This project started with a UDP to TCP approach, but later moved to HTTP for use behind a reverse proxy and improved obfuscation.
 - https://github.com/mullvad/udp-over-tcp
 - https://github.com/rfc1036/udptunnel
 - https://nhooyr.io/websocket
-
-# Deployment
-For details on deployment, [see here](./deploy.md).
-
-# Technical docs
-For technical docs, [see here](./technical.md).
 
 # License
 [MIT](./LICENSE)
