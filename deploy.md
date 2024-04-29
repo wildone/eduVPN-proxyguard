@@ -16,7 +16,9 @@ traffic. We will document the Apache way.
 
 ## Apache
 
-To proxy ProxyGuard behind Apache, you need the `proxy_http` module enabled:
+To proxy ProxyGuard behind Apache, you need the [proxy_http](https://httpd.apache.org/docs/2.4/mod/mod_proxy_http.html) module enabled.
+
+This is enabled by default on Fedora/EL. For Debian/Ubuntu, you need to run the following command to enable it:
 
 ```bash
 sudo a2enmod proxy_http
