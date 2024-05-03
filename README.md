@@ -18,7 +18,11 @@ Run: `make`
 
 # Installing
 
-Run: `make install`
+Run:
+
+```bash
+$ sudo make install
+```
 
 This will install the daemons under `/usr/local` and add the `systemd` 
 service files. Do not forget to run `systemctl daemon-reload`. After that you
@@ -35,7 +39,7 @@ Environment=TO=127.0.0.1:443
 
 ## DEB/RPM packages
 
-Currently there are DEB/RPM packages available in eduVPN's development repository, [follow the eduVPN docs to add the repo](https://docs.eduvpn.org/server/v3/development-repo.html).
+Currently there are DEB/RPM packages available in eduVPN's server repository, [follow the eduVPN docs to add the repo](https://docs.eduvpn.org/server/v3/repo.html).
 
 And then install ProxyGuard using: `sudo apt -y install proxyguard-client` or `sudo dnf -y install proxyguard-client` 
 
