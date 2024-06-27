@@ -84,7 +84,7 @@ func tcpToUDP(r *timeoutReader, udpc *net.UDPConn) error {
 	}
 }
 
-// udpToWS reads from the UDP connection udpc and writes packets to the wsc connection
+// udpToTCP reads from the UDP connection udpc and writes packets to the tcp buffer
 // The incoming UDP packets are encapsulated inside TCP with a 2 byte length prefix
 func udpToTCP(udpc *net.UDPConn, w *bufio.Writer) error {
 	var bufs [bufSize]byte
@@ -151,7 +151,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error 
 	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	// read from udp and write to ws socket
+	// read from udp and write to tcp buffer
 	go func() {
 		defer wg.Done()
 		err := udpToTCP(udpc, rw.Writer)
