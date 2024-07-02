@@ -17,7 +17,7 @@ lint:
 	golangci-lint run ./... -E stylecheck,revive,gocritic
 
 sloc:
-	cloc --include-ext=go .
+	tokei -t=Go . || cloc --include-ext=go .
 
 test:
 	go test -v ./...
