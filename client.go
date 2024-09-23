@@ -3,6 +3,7 @@ package proxyguard
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -191,6 +192,7 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 		DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
 			return c.dialContext(ctx, dialer, network, addr, peerhost, pips)
 		},
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
 	}
 	c.httpc.Transport = transport
 
