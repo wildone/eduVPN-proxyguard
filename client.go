@@ -188,12 +188,11 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 	if c.httpc == nil {
 		c.httpc = &http.Client{}
 	}
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
-			return c.dialContext(ctx, dialer, network, addr, peerhost, pips)
-		},
-		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
+		return c.dialContext(ctx, dialer, network, addr, peerhost, pips)
 	}
+	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS13}
 	c.httpc.Transport = transport
 
 	req, err := http.NewRequestWithContext(ctx, "GET", peer, nil)
