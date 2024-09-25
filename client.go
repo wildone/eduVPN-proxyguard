@@ -3,7 +3,6 @@ package proxyguard
 import (
 	"bufio"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	utls "github.com/refraction-networking/utls"
 )
 
 // Client represents a ProxyGuard client
@@ -192,7 +193,24 @@ func (c *Client) tryTunnel(ctx context.Context, peer string, pips []string, firs
 		DialContext: func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
 			return c.dialContext(ctx, dialer, network, addr, peerhost, pips)
 		},
-		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+		DialTLSContext: func(ctx context.Context, network string, addr string) (net.Conn, error) {
+			conn, err := c.dialContext(ctx, dialer, network, addr, peerhost, pips)
+			if err != nil {
+				return nil, err
+			}
+
+			config := utls.Config{
+				ServerName: strings.Split(addr, ":")[0],
+			}
+
+			tlsConn := utls.UClient(conn, &config, utls.HelloChrome_Auto)
+			err = tlsConn.Handshake()
+			if err != nil {
+				return nil, err
+			}
+
+			return tlsConn, nil
+		},
 	}
 	c.httpc.Transport = transport
 
