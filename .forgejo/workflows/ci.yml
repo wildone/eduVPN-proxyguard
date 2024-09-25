@@ -26,6 +26,10 @@ jobs:
                 mkdir app
                 chown ci-user:ci-user app
                 su -c "git clone -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} app" ci-user                
+            - name: Get deps
+              run: |
+                cd app
+                su -c "go get -u ./..." ci-user
             - name: Build
               run: |
                 cd app
