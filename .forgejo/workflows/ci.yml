@@ -1,6 +1,6 @@
 # ---
 env:
-    BUILD_DEPENDENCIES: build-essential git golang-go wget
+    BUILD_DEPENDENCIES: build-essential lsb-release git wget
     GOCILINT_VERSION: 1.59.1
 # ---
 on: [push]
@@ -13,6 +13,11 @@ jobs:
             - name: Install OS Dependencies
               run: |
                 apt-get update && apt-get install --yes $BUILD_DEPENDENCIES
+            - name: Install Go from backports
+              run: |
+                echo "deb http://deb.debian.org/debian $(lsb_release -cs)-backports main" >> /etc/apt/sources.list
+                apt-get update
+                apt-get install --yes -t $(lsb_release -cs)-backports golang-go
             - name: Install linter
               run: |
                 wget -O lint.deb https://github.com/golangci/golangci-lint/releases/download/v$GOCILINT_VERSION/golangci-lint-$GOCILINT_VERSION-linux-amd64.deb
