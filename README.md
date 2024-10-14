@@ -2,9 +2,14 @@
 
 Proxy UDP connections over HTTP(s). The main use case is to proxy WireGuard packets.
 
-It does this by doing a HTTP upgrade request similar to how websockets work.
+# Goal
 
-This means we can tunnel the protocol behind a reverse proxy.
+The goal of this project is NOT to work around _intentional_
+state/organizational network blocks/censorship. We developed ProxyGuard to work
+on networks that are misconfigured. For example on networks where UDP is
+blocked, or there is an issue with the MTU. Therefore, ProxyGuard currently
+does not do any advanced anti-censorship tricks, it is merely a proxy for UDP
+traffic. This keeps the codebase simple.
 
 # Dependencies
 
