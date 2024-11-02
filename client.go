@@ -208,7 +208,7 @@ func (th *tcpHandshake) Handshake() error {
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
-			return dialContext(ctx, dialer, network, addr, peerhost, th.pips)
+		return dialContext(ctx, dialer, network, addr, peerhost, th.pips)
 	}
 	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS13}
 	th.httpc.Transport = transport

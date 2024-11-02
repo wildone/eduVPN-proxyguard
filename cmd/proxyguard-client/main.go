@@ -75,8 +75,8 @@ func main() {
 		ListenPort:    *listenport,
 		TCPSourcePort: *tcpsp,
 		Fwmark:        *fwmark,
-		PeerIPS: pips,
-		Peer: *to,
+		PeerIPS:       pips,
+		Peer:          *to,
 	}
 	err := client.SetupDNS(ctx)
 	if err != nil {
