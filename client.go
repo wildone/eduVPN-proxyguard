@@ -177,6 +177,7 @@ func dialContext(ctx context.Context, dialer net.Dialer, network string, addr st
 	// the hostname is not the peer hostname
 	// return the default dialcontext
 	if host != peerhost {
+		log.Logf("host: %s, not equal to peer host: %s, not using DNS cache...", host, peerhost)
 		return dialer.DialContext(ctx, network, addr)
 	}
 
@@ -198,8 +199,8 @@ func (th *tcpHandshake) Handshake() error {
 		return &fatalError{Err: err}
 	}
 
-	peerhost := u.Host
-
+	// get the hostname of the peer without the port
+	peerhost := u.Hostname()
 	// set fwmark on the socket
 	dialer := th.configureSocket()
 	if th.httpc == nil {
