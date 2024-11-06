@@ -77,6 +77,7 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Logf("Failed dialing WireGuard: %v", err)
 		return
 	}
+	defer wgconn.Close()
 
 	// tunnel the traffic using the buffered connection
 	err = tunnel(r.Context(), wgconn, brw)
