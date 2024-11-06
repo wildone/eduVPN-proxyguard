@@ -24,6 +24,8 @@
   - Fix `make install`
 - Workflows:
   - Initial Forgejo CI
+- Server:
+  - Properly close wireguard connections
 
 # 1.0.1 (2024-04-05)
 
