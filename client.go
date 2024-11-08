@@ -81,7 +81,9 @@ func (c *Client) Tunnel(ctx context.Context, wglisten int) error {
 
 	err := restartUntilErr(ctx, func(ctx context.Context) error {
 		log.Logf("waiting for traffic...")
-		err := c.tryTunnel(ctx, wglisten)
+		cctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		err := c.tryTunnel(cctx, wglisten)
 		var fErr *fatalError
 		if errors.As(err, &fErr) {
 			log.Logf("%v, exiting...", fErr)
@@ -119,8 +121,8 @@ type tcpHandshake struct {
 	userAgent   string
 	httpc       *http.Client
 	rwc         io.ReadWriteCloser
+	wg          sync.WaitGroup
 	established bool
-	mu          sync.RWMutex
 }
 
 // configureSocket creates a TCP dial with fwmark/SO_MARK set
@@ -194,6 +196,7 @@ func dialContext(ctx context.Context, dialer net.Dialer, network string, addr st
 
 func (th *tcpHandshake) Handshake() error {
 	log.Log("Connecting to HTTP server...")
+	defer th.wg.Done()
 	u, err := url.Parse(th.peer)
 	if err != nil {
 		return &fatalError{Err: err}
@@ -251,40 +254,48 @@ func (th *tcpHandshake) Handshake() error {
 		return &fatalError{Err: fmt.Errorf("response body is not of type io.ReadWriteCloser: %T", rb)}
 	}
 	th.rwc = rwc
-	th.mu.Lock()
 	th.established = true
-	th.mu.Unlock()
 	log.Logf("Connected to HTTP server, ready for proxying traffic...")
 	return nil
 }
 
 func (th *tcpHandshake) Read(p []byte) (n int, err error) {
-	th.mu.RLock()
-	if !th.established {
-		th.mu.RUnlock()
-		return 0, nil
+	// TODO: how expensive is all of this?
+	// Ideally we only want to do this when not established yet
+	done := make(chan struct{}, 1)
+	go func() {
+		th.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <- th.ctx.Done():
+		return 0, context.Canceled
+	case <-done:
+			// this space intentionally left blank
 	}
-	th.mu.RUnlock()
+	if th.rwc == nil {
+		return 0, io.EOF
+	}
 	return th.rwc.Read(p)
 }
 
 func (th *tcpHandshake) Close() {
 	if th.rwc != nil {
 		th.rwc.Close()
+		th.rwc = nil
 	}
 }
 
 func (th *tcpHandshake) Write(p []byte) (n int, err error) {
-	th.mu.RLock()
 	if !th.established {
-		th.mu.RUnlock()
 		log.Logf("Got traffic, creating a handshake...")
 		herr := th.Handshake()
 		if herr != nil {
 			return 0, herr
 		}
-	} else {
-		th.mu.RUnlock()
+	}
+	if th.rwc == nil {
+		return 0, io.EOF
 	}
 	return th.rwc.Write(p)
 }
@@ -301,6 +312,7 @@ func (c *Client) tryTunnel(ctx context.Context, wglisten int) (err error) {
 		setupSocket: c.SetupSocket,
 		userAgent:   c.UserAgent,
 	}
+	th.wg.Add(1)
 	defer th.Close()
 	udpaddr := &net.UDPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
