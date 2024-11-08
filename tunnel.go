@@ -117,7 +117,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, rw *bufio.ReadWriter) error 
 
 	// make the TCP reader timeout after 60 seconds
 	tr := newTimeoutReader(ctx, rw.Reader, 60*time.Second)
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	// read from udp and write to tcp buffer
