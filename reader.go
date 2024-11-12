@@ -1,19 +1,19 @@
 package proxyguard
 
 import (
-	"bufio"
 	"context"
 	"errors"
+	"io"
 	"time"
 )
 
 type timeoutReader struct {
 	ctx     context.Context
-	reader  *bufio.Reader
+	reader  io.Reader
 	timeout time.Duration
 }
 
-func newTimeoutReader(ctx context.Context, parent *bufio.Reader, timeout time.Duration) *timeoutReader {
+func newTimeoutReader(ctx context.Context, parent io.Reader, timeout time.Duration) *timeoutReader {
 	return &timeoutReader{
 		ctx:     ctx,
 		reader:  parent,

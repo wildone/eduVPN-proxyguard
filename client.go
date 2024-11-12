@@ -120,7 +120,8 @@ type tcpHandshake struct {
 	setupSocket func(fd int)
 	userAgent   string
 	httpc       *http.Client
-	rwc         io.ReadWriteCloser
+	tr          *timeoutReader
+	wc          io.WriteCloser
 	wg          sync.WaitGroup
 	established bool
 }
@@ -253,8 +254,10 @@ func (th *tcpHandshake) Handshake() error {
 	if !ok {
 		return &fatalError{Err: fmt.Errorf("response body is not of type io.ReadWriteCloser: %T", rb)}
 	}
-	th.rwc = rwc
+	th.wc = rwc
+	th.tr = newTimeoutReader(th.ctx, rwc, 60*time.Second)
 	th.established = true
+
 	log.Logf("Connected to HTTP server, ready for proxying traffic...")
 	return nil
 }
@@ -268,21 +271,22 @@ func (th *tcpHandshake) Read(p []byte) (n int, err error) {
 		close(done)
 	}()
 	select {
-	case <- th.ctx.Done():
+	case <-th.ctx.Done():
 		return 0, context.Canceled
 	case <-done:
-			// this space intentionally left blank
+		// this space intentionally left blank
 	}
-	if th.rwc == nil {
+	if th.tr == nil {
 		return 0, io.EOF
 	}
-	return th.rwc.Read(p)
+	return th.tr.Read(p)
 }
 
 func (th *tcpHandshake) Close() {
-	if th.rwc != nil {
-		th.rwc.Close()
-		th.rwc = nil
+	if th.wc != nil {
+		th.wc.Close()
+		th.wc = nil
+		th.tr = nil
 	}
 }
 
@@ -294,10 +298,10 @@ func (th *tcpHandshake) Write(p []byte) (n int, err error) {
 			return 0, herr
 		}
 	}
-	if th.rwc == nil {
+	if th.wc == nil {
 		return 0, io.EOF
 	}
-	return th.rwc.Write(p)
+	return th.wc.Write(p)
 }
 
 // tryTunnel tries to tunnel the connection by connecting to HTTP peer `to` with IPs `pips`

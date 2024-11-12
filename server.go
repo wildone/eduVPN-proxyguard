@@ -69,7 +69,11 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// https://github.com/golang/go/issues/32314
 	// TODO: is this really needed for us?
 	b, _ := brw.Reader.Peek(brw.Reader.Buffered())
-	brw.Reader.Reset(io.MultiReader(bytes.NewReader(b), conn))
+
+	// client read should timeout after 60 seconds
+	mr := io.MultiReader(bytes.NewReader(b), conn)
+	tr := newTimeoutReader(r.Context(), mr, 60*time.Second)
+	brw.Reader.Reset(tr)
 
 	// connect to WireGuard
 	wgconn, err := net.DialUDP("udp", nil, s.wgaddr)
