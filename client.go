@@ -197,7 +197,6 @@ func dialContext(ctx context.Context, dialer net.Dialer, network string, addr st
 
 func (th *tcpHandshake) Handshake() error {
 	log.Log("Connecting to HTTP server...")
-	defer th.wg.Done()
 	u, err := url.Parse(th.peer)
 	if err != nil {
 		return &fatalError{Err: err}
@@ -257,6 +256,7 @@ func (th *tcpHandshake) Handshake() error {
 	th.wc = rwc
 	th.tr = newTimeoutReader(th.ctx, rwc, 60*time.Second)
 	th.established = true
+	th.wg.Done()
 
 	log.Logf("Connected to HTTP server, ready for proxying traffic...")
 	return nil
@@ -265,6 +265,9 @@ func (th *tcpHandshake) Handshake() error {
 func (th *tcpHandshake) Read(p []byte) (n int, err error) {
 	// TODO: how expensive is all of this?
 	// Ideally we only want to do this when not established yet
+
+	// wait for the handshake to have completed
+	// or for the context to be canceled
 	done := make(chan struct{}, 1)
 	go func() {
 		th.wg.Wait()
@@ -287,6 +290,12 @@ func (th *tcpHandshake) Close() {
 		th.wc.Close()
 		th.wc = nil
 		th.tr = nil
+	}
+	// if we didn't do a handshake yet
+	// we signal that the waitgroup is done
+	// such that in read we do not get stuck in a goroutine
+	if !th.established {
+		th.wg.Done()
 	}
 }
 
