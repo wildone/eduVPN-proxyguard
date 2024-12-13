@@ -1,36 +1,21 @@
-# ---
-env:
-    BUILD_DEPENDENCIES: build-essential git golang-go wget
-    GOCILINT_VERSION: 1.59.1
-# ---
 on: [push]
 jobs:
     tests:
         runs-on: docker
         container:
-            image: debian:latest
+            # https://codeberg.org/fkooman/frkoci
+            image: codeberg.org/fkooman/ci:latest
         steps:
-            - name: Install OS Dependencies
+            - name: Clone
               run: |
-                apt-get update && apt-get install --yes $BUILD_DEPENDENCIES
-            - name: Install linter
-              run: |
-                wget -O lint.deb https://github.com/golangci/golangci-lint/releases/download/v$GOCILINT_VERSION/golangci-lint-$GOCILINT_VERSION-linux-amd64.deb
-                dpkg -i lint.deb
-                rm lint.deb
-            - name: Add CI User
-              run: |
-                useradd -m ci-user
-            - name: Clone Repository
-              run: |
-                mkdir app
-                chown ci-user:ci-user app
-                su -c "git clone -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} app" ci-user                
+                git clone --depth 1 -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} .
             - name: Build
               run: |
-                cd app
-                su -c "unshare -c -n make all" ci-user
+                unshare -U -n go version
+                unshare -U -n make all
+            - name: Test
+              run: |
+                unshare -U -n make test
             - name: Lint
               run: |
-                cd app
-                su -c "unshare -c -n make lint" ci-user
+                unshare -U -n make lint
