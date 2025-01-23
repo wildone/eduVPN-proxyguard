@@ -84,7 +84,7 @@ func (s tunnelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer wgconn.Close()
 
 	// tunnel the traffic using the buffered connection
-	err = tunnel(r.Context(), wgconn, brw)
+	err = tunnel(r.Context(), wgconn, brw, nil)
 	if err == nil {
 		return
 	}

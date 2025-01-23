@@ -20,7 +20,7 @@ const hdrLength = 2
 // writeUDPChunks writes UDP packets from buffer to the connection
 // As our packets are prefixed with a 2 byte UDP size header,
 // we loop through the buffer up until nothing is left to write or up until we find a non-complete packet
-func writeUDPChunks(conn net.Conn, buf []byte) int {
+func writeUDPChunks(conn *net.UDPConn, buf []byte, wgaddr *net.UDPAddr) int {
 	idx := 0
 	for {
 		// get the header length index
@@ -38,8 +38,12 @@ func writeUDPChunks(conn net.Conn, buf []byte) int {
 			return idx
 		}
 		datagram := buf[hdre:dge]
-		// write and check if the write length is not equal
-		_, err := conn.Write(datagram)
+		var err error
+		if wgaddr != nil {
+			_, err = conn.WriteTo(datagram, wgaddr)
+		} else {
+			_, err = conn.Write(datagram)
+		}
 		if err != nil {
 			return idx
 		}
@@ -60,14 +64,14 @@ func writeTCP(w *bufio.Writer, buf []byte, n int) error {
 
 // tcpToUDP reads from the TCP reader r and writes packets to the udpc connection
 // The incoming TCP packets are encapsulated UDP packets with a 2 byte length prefix
-func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn) error {
+func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn, wgaddr *net.UDPAddr) error {
 	var bufr [bufSize]byte
 	todo := 0
 	for {
 		n, rerr := r.Read(bufr[todo:])
 		if n > 0 {
 			todo += n
-			done := writeUDPChunks(udpc, bufr[:todo])
+			done := writeUDPChunks(udpc, bufr[:todo], wgaddr)
 
 			// There is still data left to be written
 			// Copy to front
@@ -101,7 +105,7 @@ func udpToTCP(udpc *net.UDPConn, w *bufio.Writer) error {
 	}
 }
 
-func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter) error {
+func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter, wgaddr *net.UDPAddr) error {
 	cancel := make(chan struct{})
 	go func() {
 		for {
@@ -129,7 +133,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter) error
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := tcpToUDP(brw.Reader, udpc)
+		err := tcpToUDP(brw.Reader, udpc, wgaddr)
 		if err != nil {
 			errChan <- err
 		}

@@ -78,16 +78,17 @@ func main() {
 		PeerIPS:       pips,
 		Peer:          *to,
 	}
-	err := client.SetupDNS(ctx)
+	_, err := client.Setup(ctx)
 	if err != nil {
 		select {
 		case <-ctx.Done():
 			cl.Log("exiting...")
 		default:
-			cl.Logf("error occurred when resolving DNS: %v", err)
+			cl.Logf("error occurred when setting up client: %v", err)
 		}
 		return
 	}
+	defer client.Close()
 	err = client.Tunnel(ctx, *forwardport)
 	if err != nil {
 		select {
