@@ -7,7 +7,7 @@
     - Go API Client struct: 
       - `UserAgent` new option to set the user agent for the HTTP handshake
       - `Listen` has been replaced by `ListenPort`
-      - `Ready` callback has been removed as setting up DNS is now separated with `SetupDNS` function
+      - `Ready` callback has been removed as setting up the client including caching DNS is now separated with the `Setup` function
       - `Peer` new option to specify the peer
       - `PeerIPs` new option to specify the DNS IPs of the peer
       - `setupSocket` callback no longer takes the peer IPs as the second argument, but only contains the file descriptor

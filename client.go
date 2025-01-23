@@ -25,6 +25,9 @@ type Client struct {
 	// TCPSourcePort is the source port for the TCP connection
 	TCPSourcePort int
 
+	// uconn is the udp connection
+	uconn *net.UDPConn
+
 	// Fwmark sets the SO_MARK to use
 	// Set to 0 or negative to disable
 	// This is only set on Linux
@@ -35,7 +38,7 @@ type Client struct {
 
 	// PeerIPS is the list of DNS resolved IPs for the Peer
 	// You may leave this empty and automatically resolve PeerIPs using
-	// `SetupDNS`
+	// `Setup`
 	PeerIPS []string
 
 	// SetupSocket is called when the socket is setting up
@@ -46,7 +49,7 @@ type Client struct {
 	UserAgent string
 }
 
-func (c *Client) SetupDNS(ctx context.Context) error {
+func (c *Client) setupDNS(ctx context.Context) error {
 	// peer IPs already resolved
 	if len(c.PeerIPS) > 0 {
 		return nil
@@ -64,8 +67,31 @@ func (c *Client) SetupDNS(ctx context.Context) error {
 	return nil
 }
 
+// Setup makes sure the client has a socket and caches the DNS for the Proxy endpoint
+// This has to be called before `Tunnel`
+func (c *Client) Setup(ctx context.Context) (int, error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: c.ListenPort,
+	})
+	if err != nil {
+		return -1, err
+	}
+	err = c.setupDNS(ctx)
+	if err != nil {
+		return -1, err
+	}
+	port := conn.LocalAddr().(*net.UDPAddr).Port
+	c.uconn = conn
+	return port, nil
+}
+
 // Tunnel tunnels a connection from wireguard connection port `wglisten`
+// This has to be called after 'Setup'
 func (c *Client) Tunnel(ctx context.Context, wglisten int) error {
+	if c.uconn == nil {
+		return errors.New("no UDP connection, was Setup called?")
+	}
 	// If the tunnel exits within this delta, that restart is marked as 'failed'
 	// and the next wait is cycled through
 	d := time.Duration(10 * time.Second)
@@ -78,6 +104,8 @@ func (c *Client) Tunnel(ctx context.Context, wglisten int) error {
 		time.Duration(8 * time.Second),
 		time.Duration(10 * time.Second),
 	}
+
+	defer c.uconn.Close()
 
 	err := restartUntilErr(ctx, func(ctx context.Context) error {
 		log.Logf("waiting for traffic...")
@@ -327,19 +355,10 @@ func (c *Client) tryTunnel(ctx context.Context, wglisten int) (err error) {
 	}
 	th.wg.Add(1)
 	defer th.Close()
-	udpaddr := &net.UDPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: c.ListenPort,
-	}
 	wgaddr := &net.UDPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: wglisten,
 	}
-	wgconn, err := net.DialUDP("udp", udpaddr, wgaddr)
-	if err != nil {
-		return err
-	}
-	defer wgconn.Close()
 	rw := bufio.NewReadWriter(bufio.NewReader(th), bufio.NewWriter(th))
-	return tunnel(ctx, wgconn, rw)
+	return tunnel(ctx, c.uconn, rw, wgaddr)
 }

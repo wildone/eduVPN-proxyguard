@@ -20,7 +20,7 @@ const hdrLength = 2
 // writeUDPChunks writes UDP packets from buffer to the connection
 // As our packets are prefixed with a 2 byte UDP size header,
 // we loop through the buffer up until nothing is left to write or up until we find a non-complete packet
-func writeUDPChunks(conn net.Conn, buf []byte) int {
+func writeUDPChunks(conn *net.UDPConn, buf []byte, wgaddr *net.UDPAddr) int {
 	idx := 0
 	for {
 		// get the header length index
@@ -39,7 +39,7 @@ func writeUDPChunks(conn net.Conn, buf []byte) int {
 		}
 		datagram := buf[hdre:dge]
 		// write and check if the write length is not equal
-		_, err := conn.Write(datagram)
+		_, err := conn.WriteTo(datagram, wgaddr)
 		if err != nil {
 			return idx
 		}
@@ -60,14 +60,14 @@ func writeTCP(w *bufio.Writer, buf []byte, n int) error {
 
 // tcpToUDP reads from the TCP reader r and writes packets to the udpc connection
 // The incoming TCP packets are encapsulated UDP packets with a 2 byte length prefix
-func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn) error {
+func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn, wgaddr *net.UDPAddr) error {
 	var bufr [bufSize]byte
 	todo := 0
 	for {
 		n, rerr := r.Read(bufr[todo:])
 		if n > 0 {
 			todo += n
-			done := writeUDPChunks(udpc, bufr[:todo])
+			done := writeUDPChunks(udpc, bufr[:todo], wgaddr)
 
 			// There is still data left to be written
 			// Copy to front
@@ -85,10 +85,13 @@ func tcpToUDP(r *bufio.Reader, udpc *net.UDPConn) error {
 
 // udpToTCP reads from the UDP connection udpc and writes packets to the tcp buffer
 // The incoming UDP packets are encapsulated inside TCP with a 2 byte length prefix
-func udpToTCP(udpc *net.UDPConn, w *bufio.Writer) error {
+func udpToTCP(udpc *net.UDPConn, w *bufio.Writer, addr *net.UDPAddr) error {
 	var bufs [bufSize]byte
 	for {
-		n, _, rerr := udpc.ReadFromUDP(bufs[2:])
+		n, gaddr, rerr := udpc.ReadFromUDP(bufs[2:])
+		if gaddr.String() != addr.String() {
+			continue
+		}
 		if n > 0 {
 			werr := writeTCP(w, bufs[:n+2], n)
 			if werr != nil {
@@ -101,7 +104,7 @@ func udpToTCP(udpc *net.UDPConn, w *bufio.Writer) error {
 	}
 }
 
-func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter) error {
+func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter, wgaddr *net.UDPAddr) error {
 	cancel := make(chan struct{})
 	go func() {
 		for {
@@ -121,7 +124,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter) error
 	// read from udp and write to tcp buffer
 	go func() {
 		defer wg.Done()
-		err := udpToTCP(udpc, brw.Writer)
+		err := udpToTCP(udpc, brw.Writer, wgaddr)
 		if err != nil {
 			errChan <- err
 		}
@@ -129,7 +132,7 @@ func tunnel(ctx context.Context, udpc *net.UDPConn, brw *bufio.ReadWriter) error
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := tcpToUDP(brw.Reader, udpc)
+		err := tcpToUDP(brw.Reader, udpc, wgaddr)
 		if err != nil {
 			errChan <- err
 		}
