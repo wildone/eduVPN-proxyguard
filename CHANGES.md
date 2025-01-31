@@ -1,4 +1,4 @@
-# UNRELEASED
+# 2.0.0 (2025-01-31)
 - Client:
     - Add support for setting the UserAgent
     - Remove code that dynamically waits for an UDP packet
@@ -26,6 +26,7 @@
   - Initial Forgejo CI
 - Server:
   - Properly close wireguard connections
+  - Log when server is ready
 
 # 1.0.1 (2024-04-05)
 
